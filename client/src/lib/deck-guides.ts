@@ -39,32 +39,32 @@ export const DECK_GUIDES: Record<string, DeckGuide> = {
     ],
   },
 
-  "Grand Larceny": {
+  "Most Wanted": {
     overview:
-      "A Sultai (Black/Green/Blue) theft deck led by Gonti, Canny Acquisitor. The strategy revolves around playing evasive creatures, dealing combat damage to opponents, and stealing their cards to use against them. You win with your opponents' own threats.",
+      "A Mardu (White/Black/Red) crime and treasure deck led by Olivia, Opulent Outlaw. The strategy revolves around committing crimes (targeting opponents' stuff), generating Treasure tokens, and using Outlaws — Assassins, Mercenaries, Pirates, Rogues, and Warlocks — to fuel a value engine that overwhelms opponents.",
     earlyGame:
-      "Deploy cheap evasive creatures turns 1-3: creatures with flying, unblockable, or menace. Your goal is to start connecting with opponents as early as possible to fuel Gonti's theft triggers. Sol Ring into a turn-2 evasive creature is ideal. Don't waste removal early — save it for real threats.",
+      "Turns 1-3, deploy cheap Outlaws like Changeling Outcast, Impulsive Pilferer, and Mistmeadow Skulk. These commit crimes early (targeting opponents) and start generating value. Sol Ring or signets into a turn-3 Olivia is the dream start. Every crime you commit with Olivia out creates a Treasure and drains opponents.",
     midGame:
-      "By turns 5-8, you should have Gonti or other theft effects online. Start stealing the best cards from opponents' libraries. Prioritize stealing ramp and card draw — these fuel your engine further. Use removal to clear blockers for your evasive creatures. Ohran Frostfang turns all your attackers into card draw.",
+      "Turns 4-7, Olivia should be online generating Treasures from crimes. Use Treasure to ramp into big threats like Angrath's Marauders (double damage) or Queen Marchesa (card advantage through the Monarch). Academy Manufactor triples your token production — every Treasure also creates a Food and a Clue.",
     lateGame:
-      "You're now playing multiple opponents' cards against them. Villainous Wealth as a finisher can steal 10+ cards in one shot. Your late game is as strong as your opponents' decks. Keep stealing threats and turning the table — you have no ceiling because you're using the best cards from everyone.",
+      "Your Treasure hoard funds massive plays. Seize the Spotlight forces opponents into lose-lose choices. Mass Mutiny steals all the best creatures. Vihaan, Goldwaker (your backup commander) turns all your Treasures into 3/3 hasty attackers while keeping their mana ability. A board of 10 Treasures becomes a lethal army.",
     keyCards: [
-      { name: "Gonti, Canny Acquisitor", tip: "Your commander. Whenever a creature you control deals combat damage, you exile the top card of that player's library and can cast it. Evasion is key to triggering this consistently." },
-      { name: "Thief of Sanity", tip: "A 2/2 flyer that lets you look at the top 3 cards of a damaged player's library and exile one to cast later. Flying makes it hard to block." },
-      { name: "Fallen Shinobi", tip: "Has ninjutsu — swap an unblocked attacker for this, exile the top 2 cards of that opponent's library and cast them free. Huge tempo swing." },
-      { name: "Villainous Wealth", tip: "X spell that exiles the top X cards of an opponent's library and lets you cast any number of them free. Your late-game haymaker. X=10 usually ends the game." },
-      { name: "Ohran Frostfang", tip: "Gives all your attacking creatures deathtouch and 'whenever this deals combat damage to a player, draw a card.' Makes every creature terrifying." },
+      { name: "Olivia, Opulent Outlaw", tip: "Your commander. Flying, lifelink, and whenever you commit a crime, create a Treasure and each opponent loses 1 life. Crimes = targeting opponents or their stuff. Almost everything you do is a crime." },
+      { name: "Vihaan, Goldwaker", tip: "Backup commander. Gives all your Outlaws vigilance and haste. Your Treasure tokens become 3/3 Construct creatures that are still Treasures — attack with them or tap for mana." },
+      { name: "Academy Manufactor", tip: "Whenever you create a Treasure, Food, or Clue, create one of each instead. Triples your token output. Combined with Olivia's crime triggers, this is explosive." },
+      { name: "Queen Marchesa", tip: "Gives you the Monarch on ETB — draw an extra card each turn. If opponents take the Monarch from you, she creates 1/1 Assassins with deathtouch and haste." },
+      { name: "Angrath's Marauders", tip: "Doubles all damage your sources deal. Combined with a wide board of Outlaws, this turns modest attacks into lethal swings." },
     ],
     combos: [
-      { cards: ["Evasive Creatures", "Gonti, Canny Acquisitor"], explanation: "The core engine. Unblockable/flying creatures guarantee combat damage, which triggers Gonti's theft ability every combat." },
-      { cards: ["Ohran Frostfang", "Wide Board"], explanation: "Frostfang gives deathtouch to all attackers (forcing bad blocks) and draws cards on every hit. With 4+ creatures, you'll draw your entire deck." },
-      { cards: ["Fallen Shinobi", "Unblocked Creature"], explanation: "Ninjutsu replaces an unblocked attacker with Shinobi, who exiles and casts 2 cards for free. The returned creature can be replayed for ETB value." },
+      { cards: ["Olivia, Opulent Outlaw", "Crime Triggers"], explanation: "Almost every targeted removal, theft, or goading effect commits a crime. With Olivia out, each crime drains opponents and gives you Treasure. Multiple crimes per turn add up fast." },
+      { cards: ["Academy Manufactor", "Treasure Generation"], explanation: "Manufactor triples every Treasure into Treasure + Food + Clue. With Olivia making Treasures on crimes, you get massive card draw (Clues), life gain (Food), and mana (Treasure) simultaneously." },
+      { cards: ["Vihaan, Goldwaker", "Treasure Tokens"], explanation: "Vihaan turns your Treasure hoard into an army of 3/3 Constructs with haste. They're still Treasures, so you can sacrifice them for mana if needed. 10 Treasures = 30 power attacking." },
     ],
     tips: [
-      "Remember: stolen cards use YOUR mana to cast, so you still need good mana fixing. Prioritize lands that produce any color.",
-      "In multiplayer, steal from the player whose cards complement your current board state. Need removal? Steal from the control player.",
-      "Don't overcommit to the board. This deck is a value engine, not an aggro deck. 3-4 evasive creatures is plenty.",
-      "Ninjutsu is your best friend. Return ETB creatures to hand for Ninjutsu, then replay them for more value.",
+      "Almost everything is a crime: targeted removal, stealing, goading, and even equipping opponents' creatures. Look for crime triggers everywhere.",
+      "Don't sacrifice all your Treasures for mana. With Vihaan, they're potential 3/3 attackers. Balance spending and hoarding.",
+      "Life Insurance enchantment creates Treasures whenever any creature dies. In multiplayer with board wipes flying around, this generates absurd value.",
+      "Lightning Greaves protects Olivia and gives her haste for immediate crime triggers. Prioritize equipping your commander.",
     ],
   },
 

@@ -268,7 +268,7 @@ export default function MatchupsPage() {
             <BarChart3 className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-xl font-bold">Matchup Tracker</h1>
+            <h1 className="text-xl font-display font-bold">Matchup Tracker</h1>
             <p className="text-xs text-muted-foreground">
               Log games and track your win rates
             </p>

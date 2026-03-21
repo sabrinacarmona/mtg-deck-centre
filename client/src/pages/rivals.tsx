@@ -591,7 +591,7 @@ export default function RivalsPage() {
             <Swords className="w-5 h-5 text-red-400" />
           </div>
           <div>
-            <h1 className="text-xl font-bold">Rivals & Counter-Strategy</h1>
+            <h1 className="text-xl font-display font-bold">Rivals & Counter-Strategy</h1>
             <p className="text-xs text-muted-foreground">
               Track opponent decks and plan how to beat them
             </p>

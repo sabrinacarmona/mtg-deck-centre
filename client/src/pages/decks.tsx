@@ -95,7 +95,7 @@ export default function DecksPage() {
     <div className="space-y-4" data-testid="decks-page">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">Decks</h1>
+        <h1 className="text-xl font-display font-bold">Decks</h1>
         <div className="flex items-center gap-2">
           {deckList.length >= 2 && (
             <Link href="/compare">

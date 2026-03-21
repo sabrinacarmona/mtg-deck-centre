@@ -173,7 +173,7 @@ function DeckPicker({ onPick }: { onPick: (deckId: number) => void }) {
         <div className="w-14 h-14 mx-auto rounded-full bg-primary/20 flex items-center justify-center">
           <Hand className="w-7 h-7 text-primary" />
         </div>
-        <h1 className="text-2xl font-bold text-primary">Opening Hand Simulator</h1>
+        <h1 className="text-2xl font-display font-bold text-primary">Opening Hand Simulator</h1>
         <p className="text-sm text-muted-foreground">Pick a deck to goldfish</p>
       </div>
 
@@ -223,7 +223,7 @@ function OpeningHandView({
   return (
     <div className="space-y-6">
       <div className="text-center space-y-1">
-        <h2 className="text-xl font-bold text-primary">{mulliganLabel}</h2>
+        <h2 className="text-xl font-display font-bold text-primary">{mulliganLabel}</h2>
         <p className="text-xs text-muted-foreground">
           {mulliganCount === 0
             ? "Your opening hand — keep or mulligan?"
@@ -372,7 +372,7 @@ function PlayView({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           <Hand className="w-5 h-5 text-primary shrink-0" />
-          <h1 className="text-lg sm:text-xl font-bold text-primary">Goldfishing</h1>
+          <h1 className="text-lg sm:text-xl font-display font-bold text-primary">Goldfishing</h1>
           <span className="text-xs font-mono bg-primary/10 text-primary px-2 py-0.5 rounded">
             Turn {turnNumber}
           </span>

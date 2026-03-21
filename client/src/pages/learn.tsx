@@ -182,7 +182,7 @@ export default function LearnPage() {
           <GraduationCap className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h1 className="text-xl font-bold">Learn Magic</h1>
+          <h1 className="text-xl font-display font-bold">Learn Magic</h1>
           <p className="text-xs text-muted-foreground">
             Rules, keywords, and strategy reference
           </p>
@@ -558,7 +558,7 @@ export default function LearnPage() {
                 {[
                   ["Aggro", "R", "Win fast. Flood the board with cheap, aggressive creatures and burn spells. Aim to close out before your opponent stabilises. Weakness: runs out of cards if the game goes long.", "Your Draconic Destruction deck leans aggro — ramp fast, slam dragons, attack."],
                   ["Control", "U", "Win late. Use counterspells, removal, and card draw to answer every threat. Eventually win with a single powerful finisher. Weakness: slow starts and vulnerable to explosive aggro.", "Will's First Flight has control elements — Counterspell, Negate, and Isperia drawing cards."],
-                  ["Midrange", "G", "Win on value. Play efficient threats that are individually powerful. Can pivot between aggro and control depending on the matchup. The flexible middle ground.", "Grand Larceny is midrange — stealing opponents' best cards and using them."],
+                  ["Midrange", "B", "Win on value. Play efficient threats that are individually powerful. Can pivot between aggro and control depending on the matchup. The flexible middle ground.", "Most Wanted is midrange — committing crimes, generating Treasures, and overwhelming with Outlaws."],
                 ].map(([name, mana, desc, example]) => (
                   <div key={name} className="rounded-lg bg-card/60 p-3 border border-border/40">
                     <div className="flex items-center gap-2 mb-1">

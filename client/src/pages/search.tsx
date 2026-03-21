@@ -4,9 +4,23 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import CardGrid from "@/components/CardGrid";
 import CardDetailDialog from "@/components/CardDetailDialog";
-import { Search, Heart, Sparkles, BookOpen, Layers3, Crown, TrendingUp, DollarSign, Swords } from "lucide-react";
+import {
+  Search,
+  Heart,
+  BookOpen,
+  Layers3,
+  Crown,
+  DollarSign,
+  Swords,
+  Sparkles,
+  TrendingUp,
+  Gamepad2,
+  GraduationCap,
+  Hand,
+  BarChart3,
+  ExternalLink,
+} from "lucide-react";
 import { Link } from "wouter";
 import type { CollectionCard, DeckCard } from "@shared/schema";
 import {
@@ -163,23 +177,23 @@ export default function SearchPage() {
   }, []);
 
   return (
-    <div className="space-y-4" data-testid="search-page">
+    <div className="space-y-6" data-testid="search-page">
       {/* Search input */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           type="search"
           placeholder="Search 27,000+ Magic cards..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="pl-10 h-11 text-sm bg-card border-border"
+          className="pl-10 h-12 text-sm bg-card/50 border-border/50 rounded-xl focus:border-primary/40 focus:ring-primary/20"
           data-testid="search-input"
         />
       </div>
 
       {/* Error */}
       {error && (
-        <div className="text-sm text-destructive bg-destructive/10 rounded-lg p-3">
+        <div className="text-sm text-destructive bg-destructive/10 rounded-xl p-4">
           Search failed. Try again.
         </div>
       )}
@@ -208,7 +222,7 @@ export default function SearchPage() {
           {Array.from({ length: 10 }).map((_, i) => (
             <div
               key={i}
-              className="rounded-xl bg-muted animate-pulse"
+              className="rounded-xl bg-muted/50 animate-pulse"
               style={{ aspectRatio: "488/680" }}
             />
           ))}
@@ -217,8 +231,8 @@ export default function SearchPage() {
 
       {/* Empty states */}
       {!isLoading && cards.length === 0 && debouncedQuery.length >= 2 && (
-        <div className="text-center py-12">
-          <Search className="w-8 h-8 mx-auto mb-3 text-muted-foreground/30" />
+        <div className="text-center py-16">
+          <Search className="w-10 h-10 mx-auto mb-3 text-muted-foreground/20" />
           <p className="text-sm text-muted-foreground">
             No cards found for "{debouncedQuery}"
           </p>
@@ -267,7 +281,7 @@ function SearchCardItem({
     >
       <div className="relative" style={{ aspectRatio: "488/680" }}>
         {!imgLoaded && (
-          <div className="absolute inset-0 bg-muted animate-pulse rounded-xl" />
+          <div className="absolute inset-0 bg-muted/50 animate-pulse rounded-xl" />
         )}
         {image ? (
           <img
@@ -288,12 +302,12 @@ function SearchCardItem({
         )}
       </div>
 
-      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl flex flex-col justify-end p-2 gap-1.5">
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl flex flex-col justify-end p-2.5 gap-1.5">
         <div className="text-white text-xs font-semibold leading-tight line-clamp-2">
           {card.name}
         </div>
         {card.prices?.usd && (
-          <div className="text-amber-400 text-xs font-medium">
+          <div className="text-primary text-xs font-medium">
             ${card.prices.usd}
           </div>
         )}
@@ -301,7 +315,7 @@ function SearchCardItem({
           <Button
             size="sm"
             variant={wasAdded ? "secondary" : "default"}
-            className="h-7 text-xs flex-1"
+            className="h-7 text-xs flex-1 rounded-lg"
             onClick={(e) => {
               e.stopPropagation();
               onAddToCollection();
@@ -315,7 +329,7 @@ function SearchCardItem({
                 <Button
                   size="sm"
                   variant="secondary"
-                  className="h-7 text-xs"
+                  className="h-7 text-xs rounded-lg"
                   onClick={(e) => e.stopPropagation()}
                 >
                   + Deck
@@ -358,6 +372,16 @@ function HomeDashboard({ decks }: { decks: Deck[] }) {
     queryKey: ["/api/collection"],
   });
 
+  // Card of the Day
+  const { data: randomCard, isLoading: randomLoading } = useQuery<ScryfallCard>({
+    queryKey: ["/api/scryfall/random", new Date().toDateString()],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/scryfall/random");
+      return res.json();
+    },
+    staleTime: 1000 * 60 * 60, // 1 hour
+  });
+
   // Fetch cards for each deck to get art + stats
   const deckCardsResults = useQueries({
     queries: decks.map((deck) => ({
@@ -373,6 +397,7 @@ function HomeDashboard({ decks }: { decks: Deck[] }) {
   // Only count Sabrina's decks for stats
   const myDecks = decks.filter((d: any) => !d.name.startsWith("Will's"));
   const myDeckIds = new Set(myDecks.map((d: any) => d.id));
+  const willsDecks = decks.filter((d: any) => d.name.startsWith("Will's"));
 
   // Get card counts only for Sabrina's decks
   const myDeckCards = deckCardsResults
@@ -384,29 +409,79 @@ function HomeDashboard({ decks }: { decks: Deck[] }) {
   }, 0);
 
   return (
-    <div className="space-y-6 pt-2">
-      {/* Welcome + stats row */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="card-frame rounded-xl p-4 text-center">
-          <BookOpen className="w-5 h-5 mx-auto mb-1.5 text-primary/70" />
-          <div className="text-2xl font-bold">{totalCards}</div>
-          <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Total Cards</div>
-        </div>
-        <div className="card-frame rounded-xl p-4 text-center">
-          <Layers3 className="w-5 h-5 mx-auto mb-1.5 text-primary/70" />
-          <div className="text-2xl font-bold">{myDecks.length}</div>
-          <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Decks</div>
-        </div>
-        <div className="card-frame rounded-xl p-4 text-center">
-          <DollarSign className="w-5 h-5 mx-auto mb-1.5 text-primary/70" />
-          <div className="text-2xl font-bold text-primary">${totalValue.toFixed(0)}</div>
-          <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Est. Value</div>
-        </div>
+    <div className="space-y-8">
+      {/* Stats row */}
+      <div className="grid grid-cols-3 gap-3 stagger-children">
+        <StatCard icon={BookOpen} label="Total Cards" value={totalCards.toString()} />
+        <StatCard icon={Layers3} label="Decks" value={myDecks.length.toString()} />
+        <StatCard icon={DollarSign} label="Est. Value" value={`$${totalValue.toFixed(0)}`} accent />
       </div>
 
+      {/* Card of the Day */}
+      {randomCard && (
+        <div className="animate-fade-in-up">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="w-4 h-4 text-primary" />
+            <h2 className="text-sm font-semibold text-foreground/80 uppercase tracking-wide">
+              Card of the Day
+            </h2>
+          </div>
+          <div className="glass-panel p-4 flex gap-4 items-start">
+            <div className="w-28 flex-shrink-0">
+              {randomCard.image_uris?.normal ? (
+                <img
+                  src={randomCard.image_uris.normal}
+                  alt={randomCard.name}
+                  className="w-full rounded-lg shadow-lg shadow-black/30"
+                />
+              ) : randomCard.card_faces?.[0]?.image_uris?.normal ? (
+                <img
+                  src={randomCard.card_faces[0].image_uris.normal}
+                  alt={randomCard.name}
+                  className="w-full rounded-lg shadow-lg shadow-black/30"
+                />
+              ) : (
+                <div className="w-full aspect-[488/680] bg-muted rounded-lg flex items-center justify-center">
+                  <span className="text-xs text-muted-foreground">{randomCard.name}</span>
+                </div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-display font-bold text-base text-foreground leading-tight">
+                {randomCard.name}
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">{randomCard.type_line}</p>
+              {randomCard.oracle_text && (
+                <p className="text-xs text-foreground/70 mt-2 line-clamp-3 leading-relaxed">
+                  {randomCard.oracle_text}
+                </p>
+              )}
+              <div className="flex items-center gap-3 mt-3">
+                {randomCard.prices?.usd && (
+                  <span className="text-xs font-medium text-primary">${randomCard.prices.usd}</span>
+                )}
+                {randomCard.rarity && (
+                  <span className={`text-xs capitalize px-2 py-0.5 rounded-full ${
+                    randomCard.rarity === "mythic" ? "bg-orange-500/15 text-orange-400" :
+                    randomCard.rarity === "rare" ? "bg-yellow-500/15 text-yellow-400" :
+                    randomCard.rarity === "uncommon" ? "bg-zinc-400/15 text-zinc-300" :
+                    "bg-zinc-600/15 text-zinc-400"
+                  }`}>
+                    {randomCard.rarity}
+                  </span>
+                )}
+                {randomCard.set_name && (
+                  <span className="text-[10px] text-muted-foreground truncate">{randomCard.set_name}</span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* My Decks */}
-      {decks.filter((d: any) => !d.name.startsWith("Will's")).length > 0 && (
-        <div>
+      {myDecks.length > 0 && (
+        <div className="animate-fade-in-up" style={{ animationDelay: "100ms" }}>
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Crown className="w-4 h-4 text-primary" />
@@ -416,8 +491,8 @@ function HomeDashboard({ decks }: { decks: Deck[] }) {
               <button className="text-xs text-primary hover:underline">View All</button>
             </Link>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {decks.filter((d: any) => !d.name.startsWith("Will's")).slice(0, 4).map((deck: any) => {
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 stagger-children">
+            {myDecks.slice(0, 4).map((deck: any) => {
               const deckIdx = decks.findIndex((d: any) => d.id === deck.id);
               const cards = (deckCardsResults[deckIdx]?.data || []) as DeckCard[];
               const artCard = cards.find((c: any) => c.isCommander) || cards[0];
@@ -426,7 +501,7 @@ function HomeDashboard({ decks }: { decks: Deck[] }) {
               return (
                 <Link key={deck.id} href={`/decks/${deck.id}`}>
                   <div
-                    className="relative overflow-hidden rounded-xl cursor-pointer group transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-black/30"
+                    className="relative overflow-hidden rounded-xl cursor-pointer card-hover"
                     style={{ aspectRatio: "3/4" }}
                   >
                     {artUrl ? (
@@ -451,15 +526,15 @@ function HomeDashboard({ decks }: { decks: Deck[] }) {
       )}
 
       {/* Will's Decks */}
-      {decks.filter((d: any) => d.name.startsWith("Will's")).length > 0 && (
-        <div>
+      {willsDecks.length > 0 && (
+        <div className="animate-fade-in-up" style={{ animationDelay: "200ms" }}>
           <div className="flex items-center gap-2 mb-3">
             <Swords className="w-4 h-4 text-red-400" />
             <h2 className="text-sm font-semibold text-red-400/80 uppercase tracking-wide">Will's Decks</h2>
             <span className="text-[10px] text-muted-foreground ml-auto">Know thy enemy</span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {decks.filter((d: any) => d.name.startsWith("Will's")).map((deck: any) => {
+            {willsDecks.map((deck: any) => {
               const deckIdx = decks.findIndex((d: any) => d.id === deck.id);
               const cards = (deckCardsResults[deckIdx]?.data || []) as DeckCard[];
               const artCard = cards.find((c: any) => c.isCommander) || cards[0];
@@ -469,16 +544,16 @@ function HomeDashboard({ decks }: { decks: Deck[] }) {
               return (
                 <Link key={deck.id} href={`/decks/${deck.id}`}>
                   <div
-                    className="relative overflow-hidden rounded-xl cursor-pointer group transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-red-900/20 ring-1 ring-red-500/20"
+                    className="relative overflow-hidden rounded-xl cursor-pointer card-hover ring-1 ring-red-500/15"
                     style={{ aspectRatio: "3/4" }}
                   >
                     {artUrl ? (
-                      <img src={artUrl} alt={deck.name} className="absolute inset-0 w-full h-full object-cover object-top saturate-[0.85]" />
+                      <img src={artUrl} alt={deck.name} className="absolute inset-0 w-full h-full object-cover object-top saturate-[0.8]" />
                     ) : (
                       <div className="absolute inset-0 bg-gradient-to-br from-zinc-800 to-zinc-900" />
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-red-950/90 via-black/20 to-transparent" />
-                    <div className="absolute top-2 left-2 z-10 flex items-center gap-1 bg-red-500/80 backdrop-blur-sm text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+                    <div className="absolute top-2 left-2 z-10 flex items-center gap-1 bg-red-500/70 backdrop-blur-sm text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider">
                       <Swords className="w-2.5 h-2.5" />
                       Rival
                     </div>
@@ -497,26 +572,45 @@ function HomeDashboard({ decks }: { decks: Deck[] }) {
         </div>
       )}
 
-      {/* Quick actions */}
-      <div className="text-center pt-2">
-        <p className="text-xs text-muted-foreground mb-3">
-          Search 27,000+ cards above, or explore your collection
-        </p>
-        <div className="flex items-center justify-center gap-2">
-          <Link href="/collection">
-            <Button variant="secondary" size="sm" className="gap-1.5 text-xs">
-              <BookOpen className="w-3.5 h-3.5" />
-              Collection
-            </Button>
-          </Link>
-          <Link href="/scanner">
-            <Button variant="secondary" size="sm" className="gap-1.5 text-xs">
-              <Search className="w-3.5 h-3.5" />
-              Scan Card
-            </Button>
-          </Link>
+      {/* Quick Links */}
+      <div className="animate-fade-in-up" style={{ animationDelay: "300ms" }}>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <QuickLink href="/game-night" icon={Gamepad2} label="Game Night" desc="Track your matches" />
+          <QuickLink href="/goldfish" icon={Hand} label="Goldfish" desc="Test your hands" />
+          <QuickLink href="/learn" icon={GraduationCap} label="Learn MTG" desc="Rules & strategy" />
+          <QuickLink href="/rivals" icon={Swords} label="Rivals" desc="Counter strategies" />
+          <QuickLink href="/matchups" icon={BarChart3} label="Matchups" desc="Win/loss history" />
+          <QuickLink href="/wishlist" icon={Heart} label="Wishlist" desc="Cards to get" />
         </div>
       </div>
     </div>
+  );
+}
+
+function StatCard({ icon: Icon, label, value, accent }: { icon: any; label: string; value: string; accent?: boolean }) {
+  return (
+    <div className="card-frame rounded-xl p-4 text-center">
+      <Icon className="w-5 h-5 mx-auto mb-1.5 text-primary/60" />
+      <div className={`text-2xl font-display font-bold animate-count-up ${accent ? "text-primary" : ""}`}>
+        {value}
+      </div>
+      <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">{label}</div>
+    </div>
+  );
+}
+
+function QuickLink({ href, icon: Icon, label, desc }: { href: string; icon: any; label: string; desc: string }) {
+  return (
+    <Link href={href}>
+      <div className="flex items-center gap-3 p-3 rounded-xl bg-card/50 border border-border/30 hover:border-primary/20 hover:bg-card/80 transition-all cursor-pointer group">
+        <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/15 transition-colors">
+          <Icon className="w-4 h-4 text-primary" />
+        </div>
+        <div className="min-w-0">
+          <div className="text-sm font-medium text-foreground leading-tight">{label}</div>
+          <div className="text-[10px] text-muted-foreground">{desc}</div>
+        </div>
+      </div>
+    </Link>
   );
 }

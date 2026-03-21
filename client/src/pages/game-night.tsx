@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -450,7 +450,7 @@ function GameSetup({
         <div className="w-14 h-14 mx-auto rounded-full bg-primary/20 flex items-center justify-center">
           <Gamepad2 className="w-7 h-7 text-primary" />
         </div>
-        <h1 className="text-2xl font-bold text-primary">Game Night</h1>
+        <h1 className="text-2xl font-display font-bold text-primary">Game Night</h1>
         <p className="text-sm text-muted-foreground">Pick your decks and start tracking</p>
       </div>
 
@@ -546,6 +546,30 @@ function GameSetup({
   );
 }
 
+/* ─── Match Timer ──────────────────────────────────────────────── */
+
+function MatchTimer() {
+  const [startTime] = useState(() => Date.now());
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setElapsed(Date.now() - startTime);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [startTime]);
+
+  const minutes = Math.floor(elapsed / 60000);
+  const seconds = Math.floor((elapsed % 60000) / 1000);
+  const formatted = `${minutes}:${seconds.toString().padStart(2, "0")}`;
+
+  return (
+    <span className="text-xs font-mono text-muted-foreground bg-muted/50 px-2 py-0.5 rounded hidden sm:inline-block">
+      {formatted}
+    </span>
+  );
+}
+
 /* ─── Game screen ──────────────────────────────────────────────── */
 
 function GamePlaying({
@@ -573,10 +597,11 @@ function GamePlaying({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div className="flex items-center gap-2 sm:gap-3">
           <Gamepad2 className="w-5 h-5 text-primary" />
-          <h1 className="text-lg sm:text-xl font-bold text-primary">Game Night</h1>
+          <h1 className="text-lg sm:text-xl font-display font-bold text-primary">Game Night</h1>
           <span className="text-xs font-mono bg-primary/10 text-primary px-2 py-0.5 rounded">
             Turn {turnCount}
           </span>
+          <MatchTimer />
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={onNextTurn} className="flex-1 sm:flex-none">
@@ -646,7 +671,7 @@ function GameOver({
         <Trophy className="w-10 h-10 text-primary" />
       </div>
       <div>
-        <h1 className="text-3xl font-black text-primary">{winner} Wins!</h1>
+        <h1 className="text-3xl font-display font-black text-primary">{winner} Wins!</h1>
         <p className="text-muted-foreground mt-2">
           Game ended on Turn {turnCount}
         </p>

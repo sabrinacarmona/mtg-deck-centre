@@ -87,96 +87,103 @@ export const SEED_DECKS: SeedDeck[] = [
 12 Forest`,
   },
   {
-    name: "Grand Larceny",
+    name: "Most Wanted",
     format: "commander",
-    decklist: `1 Gonti, Canny Acquisitor
-1 Felix Five-Boots
-1 Shadowmage Infiltrator
-1 Silhana Ledgewalker
-1 Trygon Predator
-1 Cold-Eyed Selkie
-1 Edric, Spymaster of Trest
-1 The Mimeoplasm
-1 Silent-Blade Oni
-1 Baleful Strix
-1 Diluvian Primordial
-1 Triton Shorestalker
-1 Whirler Rogue
-1 Oblivion Sower
-1 Void Attendant
-1 Gonti, Lord of Luxury
-1 Slither Blade
-1 Hostage Taker
-1 Thief of Sanity
-1 Fallen Shinobi
-1 Thieving Amalgam
-1 Ohran Frostfang
-1 Cazur, Ruthless Stalker
-1 Ukkima, Stalking Shadow
-1 Ghostly Pilferer
-1 Thieving Skydiver
-1 Bladegriff Prototype
-1 Sage of the Beyond
-1 Dazzling Sphinx
-1 Nashi, Moon Sage's Scion
-1 Brainstealer Dragon
-1 Doc Aurlock, Grizzled Genius
-1 Smirking Spelljacker
-1 Orochi Soul-Reaver
-1 Thieving Varmint
-1 Savvy Trader
-1 Tower Winder
-1 Sol Ring
-1 Fellwar Stone
-1 Rampant Growth
-1 Darksteel Ingot
-1 Kodama's Reach
-1 Three Visits
-1 Putrefy
-1 Prismatic Lens
-1 Stolen Goods
-1 Plasm Capture
-1 Curse of the Swine
-1 Villainous Wealth
-1 Mind's Dilation
-1 Chaos Wand
-1 Arcane Signet
+    decklist: `1 Olivia, Opulent Outlaw
+1 Vihaan, Goldwaker
+1 Council's Judgment
+1 Heliod's Intervention
+1 Angelic Sell-Sword
+1 We Ride at Dawn
+1 Massacre Girl
+1 Fain, the Broker
+1 Witch of the Moors
+1 Nighthawk Scavenger
+1 Curtains' Call
+1 Misfortune Teller
+1 Painful Truths
+1 Kamber, the Plunderer
+1 Ogre Slumlord
+1 Hex
+1 Mari, the Killing Quill
+1 Discreet Retreat
+1 Charred Graverobber
+1 Back in Town
+1 Marshland Bloodcaster
+1 Veinwitch Coven
+1 Rankle, Master of Pranks
+1 Dire Fleet Ravager
+1 Mirror Entity
+1 Dire Fleet Daredevil
+1 Captain Lannery Storm
+1 Seize the Spotlight
+1 Grenzo, Havoc Raiser
+1 Angrath's Marauders
+1 Captivating Crew
+1 Rain of Riches
+1 Laurine, the Diversion
+1 Mass Mutiny
+1 Dead Before Sunrise
+1 Graywater's Fixer
+1 Life Insurance
+1 Breena, the Demagogue
+1 Queen Marchesa
+1 Idol of Oblivion
+1 Academy Manufactor
+1 Bounty Board
+1 Mistmeadow Skulk
+1 Requisition Raid
+1 Changeling Outcast
 1 Feed the Swarm
-1 Baleful Mastery
-1 Culling Ritual
-1 Cunning Rhetoric
-1 Extract Brain
-1 Siphon Insight
-1 Predators' Hour
-1 Arcane Heist
-1 Heartless Conscription
-1 Dream-Thief's Bandana
-1 Exotic Orchard
-1 Reliquary Tower
-1 Drowned Catacomb
-1 Darkslick Shores
+1 Deadly Dispute
+1 Morbid Opportunist
+1 Aetherborn Marauder
+1 Tenured Inkcaster
+1 Shoot the Sheriff
+1 Lightning Greaves
+1 Impulsive Pilferer
+1 Shiny Impetus
+1 Humble Defector
+1 Glittering Stockpile
+1 Boros Charm
+1 Arcane Signet
+1 Trailblazer's Boots
+1 Bandit's Haul
+1 Orzhov Signet
+1 Sol Ring
+1 Rakdos Signet
 1 Command Tower
-1 Hinterland Harbor
-1 Woodland Cemetery
-1 Temple of Deceit
-1 Temple of Mystery
-1 Temple of Malady
-1 Opulent Palace
-1 Sunken Hollow
-1 Fetid Pools
-1 Access Tunnel
-1 Overflowing Basin
-1 Viridescent Bog
-1 Llanowar Wastes
-1 Underground River
-1 Yavimaya Coast
-1 Darkwater Catacombs
-1 Dimir Aqueduct
-1 Flooded Grove
-1 Twilight Mire
-5 Island
-6 Swamp
-4 Forest`,
+1 Bojuka Bog
+1 Path of Ancestry
+1 Rogue's Passage
+1 Demolition Field
+1 Tainted Peak
+1 Sunhome, Fortress of the Legion
+1 Nomad Outpost
+1 Temple of the False God
+1 Fetid Heath
+1 Command Beacon
+1 Vault of the Archangel
+1 Dragonskull Summit
+1 Temple of Silence
+1 Temple of Malice
+1 Exotic Orchard
+1 Temple of Triumph
+1 Clifftop Retreat
+1 Isolated Chapel
+1 Bonders' Enclave
+1 Caves of Koilos
+1 Battlefield Forge
+1 Sulfurous Springs
+1 Rugged Prairie
+1 Desolate Mire
+1 Shadowblood Ridge
+1 Canyon Slough
+1 Smoldering Marsh
+1 Blackcleave Cliffs
+2 Plains
+4 Swamp
+2 Mountain`,
   },
   {
     name: "Hosts of Mordor",

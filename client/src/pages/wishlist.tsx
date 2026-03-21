@@ -68,7 +68,7 @@ export default function WishlistPage() {
   return (
     <div className="space-y-4" data-testid="wishlist-page">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold flex items-center gap-2">
+        <h1 className="text-xl font-display font-bold flex items-center gap-2">
           <Heart className="w-5 h-5 text-primary" />
           Wishlist
         </h1>

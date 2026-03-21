@@ -11,14 +11,14 @@ export const KNOWN_COMBOS: KnownCombo[] = [
     commander: "Atarka, World Render",
   },
   {
-    cards: ["Deadeye Navigator", "Gonti, Lord of Luxury"],
-    result: "Infinite ETB triggers. Pair Deadeye with any ETB creature, pay 1U to flicker repeatedly for unlimited theft, ramp, or drain.",
-    commander: "Gonti, Canny Acquisitor",
+    cards: ["Academy Manufactor", "Olivia, Opulent Outlaw"],
+    result: "Every crime Olivia commits creates a Treasure, Food, AND Clue instead of just a Treasure. Triples your token output for massive card draw, life, and mana.",
+    commander: "Olivia, Opulent Outlaw",
   },
   {
-    cards: ["Panharmonicon", "Gonti, Lord of Luxury"],
-    result: "Double ETB triggers. Every creature that enters the battlefield triggers its ability twice — steal two cards instead of one.",
-    commander: "Gonti, Canny Acquisitor",
+    cards: ["Vihaan, Goldwaker", "Treasure Tokens"],
+    result: "Vihaan turns all your Treasures into 3/3 Construct creatures with haste that are still Treasures. 10 Treasures = 30 power of hasty attackers that can also tap for mana.",
+    commander: "Olivia, Opulent Outlaw",
   },
   {
     cards: ["Panharmonicon", "Solemn Simulacrum"],

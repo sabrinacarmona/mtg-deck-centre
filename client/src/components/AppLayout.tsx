@@ -13,11 +13,35 @@ import {
   BarChart3,
   MoreHorizontal,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { PerplexityAttribution } from "./PerplexityAttribution";
 
 /* ── Navigation config ─────────────────────────────── */
 
+const mainNavItems = [
+  { path: "/", icon: Search, label: "Search" },
+  { path: "/collection", icon: BookOpen, label: "Collection" },
+  { path: "/decks", icon: Layers3, label: "Decks" },
+  { path: "/game-night", icon: Gamepad2, label: "Game Night" },
+];
+
+const toolsNavItems = [
+  { path: "/goldfish", icon: Hand, label: "Goldfish" },
+  { path: "/matchups", icon: BarChart3, label: "Matchups" },
+  { path: "/rivals", icon: Swords, label: "Rivals" },
+  { path: "/scanner", icon: Camera, label: "Scanner" },
+];
+
+const personalNavItems = [
+  { path: "/wishlist", icon: Heart, label: "Wishlist" },
+  { path: "/learn", icon: GraduationCap, label: "Learn" },
+];
+
+const allNavItems = [...mainNavItems, ...toolsNavItems, ...personalNavItems];
+
+/* Mobile-specific groupings */
 const primaryNavItems = [
   { path: "/", icon: Search, label: "Search" },
   { path: "/collection", icon: BookOpen, label: "Collection" },
@@ -34,8 +58,6 @@ const secondaryNavItems = [
   { path: "/scanner", icon: Camera, label: "Scanner" },
 ];
 
-const allNavItems = [...primaryNavItems, ...secondaryNavItems];
-
 /* ── Helpers ───────────────────────────────────────── */
 
 function isActive(location: string, path: string) {
@@ -44,30 +66,153 @@ function isActive(location: string, path: string) {
   return false;
 }
 
-/* ── Desktop top nav (hidden on mobile) ────────────── */
+/* ── Desktop Sidebar ─────────────────────────────── */
 
-function DesktopNav({ location }: { location: string }) {
+function DesktopSidebar({ location, collapsed, onToggle }: { location: string; collapsed: boolean; onToggle: () => void }) {
   return (
-    <nav className="hidden md:flex items-center gap-0.5" data-testid="nav-tabs">
-      {allNavItems.map((item) => {
-        const active = isActive(location, item.path);
-        return (
-          <Link key={item.path} href={item.path}>
-            <button
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                active
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-primary hover:bg-primary/10"
-              }`}
-              data-testid={`nav-${item.label.toLowerCase()}`}
-            >
-              <item.icon className="w-4 h-4" />
-              <span>{item.label}</span>
-            </button>
-          </Link>
-        );
-      })}
-    </nav>
+    <aside
+      className={`hidden lg:flex flex-col fixed top-0 left-0 h-full z-40 transition-all duration-300 ease-out sidebar-glow ${
+        collapsed ? "w-[68px]" : "w-[220px]"
+      }`}
+      style={{ background: "hsl(28 22% 8%)" }}
+      data-testid="desktop-sidebar"
+    >
+      {/* Logo */}
+      <div className="px-4 pt-5 pb-4 flex items-center gap-2.5">
+        <Link href="/">
+          <div className="flex items-center gap-2.5 cursor-pointer" data-testid="logo-link">
+            <VaultLogo />
+            {!collapsed && (
+              <span className="font-display text-base font-bold tracking-tight text-primary whitespace-nowrap">
+                Sabrina's Vault
+              </span>
+            )}
+          </div>
+        </Link>
+      </div>
+
+      {/* Nav sections */}
+      <nav className="flex-1 px-2 space-y-5 overflow-y-auto overflow-x-hidden">
+        <NavSection label="Main" collapsed={collapsed}>
+          {mainNavItems.map((item) => (
+            <SidebarLink key={item.path} item={item} location={location} collapsed={collapsed} />
+          ))}
+        </NavSection>
+
+        <NavSection label="Tools" collapsed={collapsed}>
+          {toolsNavItems.map((item) => (
+            <SidebarLink key={item.path} item={item} location={location} collapsed={collapsed} />
+          ))}
+        </NavSection>
+
+        <NavSection label="Personal" collapsed={collapsed}>
+          {personalNavItems.map((item) => (
+            <SidebarLink key={item.path} item={item} location={location} collapsed={collapsed} />
+          ))}
+        </NavSection>
+      </nav>
+
+      {/* Collapse toggle */}
+      <div className="px-2 pb-3 pt-1">
+        <button
+          onClick={onToggle}
+          className="w-full flex items-center justify-center gap-2 px-2 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors text-xs"
+          data-testid="sidebar-toggle"
+        >
+          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+          {!collapsed && <span>Collapse</span>}
+        </button>
+      </div>
+
+      {/* Attribution */}
+      {!collapsed && (
+        <div className="px-3 pb-4">
+          <PerplexityAttribution />
+        </div>
+      )}
+    </aside>
+  );
+}
+
+function NavSection({ label, collapsed, children }: { label: string; collapsed: boolean; children: React.ReactNode }) {
+  return (
+    <div>
+      {!collapsed && (
+        <div className="px-2 mb-1.5">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+            {label}
+          </span>
+        </div>
+      )}
+      <div className="space-y-0.5">{children}</div>
+    </div>
+  );
+}
+
+function SidebarLink({
+  item,
+  location,
+  collapsed,
+}: {
+  item: { path: string; icon: any; label: string };
+  location: string;
+  collapsed: boolean;
+}) {
+  const active = isActive(location, item.path);
+  return (
+    <Link href={item.path}>
+      <button
+        className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
+          active
+            ? "bg-primary/15 text-primary shadow-sm shadow-primary/10"
+            : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+        } ${collapsed ? "justify-center px-0" : ""}`}
+        data-testid={`nav-${item.label.toLowerCase()}`}
+        title={collapsed ? item.label : undefined}
+      >
+        <item.icon className={`w-[18px] h-[18px] flex-shrink-0 ${active ? "text-primary" : ""}`} />
+        {!collapsed && <span className="truncate">{item.label}</span>}
+      </button>
+    </Link>
+  );
+}
+
+/* ── Medium screen top nav (md but not lg) ───────── */
+
+function TabletTopNav({ location }: { location: string }) {
+  return (
+    <header className="hidden md:flex lg:hidden sticky top-0 z-50 border-b border-primary/20 bg-background/80 backdrop-blur-xl">
+      <div className="max-w-6xl mx-auto w-full px-4 py-2.5 flex items-center justify-between">
+        <Link href="/">
+          <div className="flex items-center gap-2 cursor-pointer" data-testid="logo-link-tablet">
+            <VaultLogo />
+            <span className="font-display text-base font-bold tracking-tight text-primary">
+              Sabrina's Vault
+            </span>
+          </div>
+        </Link>
+        <nav className="flex items-center gap-0.5" data-testid="nav-tabs">
+          {allNavItems.map((item) => {
+            const active = isActive(location, item.path);
+            return (
+              <Link key={item.path} href={item.path}>
+                <button
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    active
+                      ? "bg-primary/15 text-primary"
+                      : "text-muted-foreground hover:text-primary hover:bg-primary/5"
+                  }`}
+                  data-testid={`tab-nav-${item.label.toLowerCase()}`}
+                >
+                  <item.icon className="w-3.5 h-3.5" />
+                  <span>{item.label}</span>
+                </button>
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+    </header>
   );
 }
 
@@ -86,7 +231,7 @@ function MobileBottomNav({
 
   return (
     <nav
-      className="fixed bottom-0 inset-x-0 z-50 md:hidden border-t-2 border-primary/30 bg-card/95 backdrop-blur-lg safe-area-bottom"
+      className="fixed bottom-0 inset-x-0 z-50 md:hidden border-t border-primary/20 bg-background/90 backdrop-blur-xl safe-area-bottom"
       data-testid="mobile-nav"
     >
       <div className="flex items-stretch justify-around px-1 h-14">
@@ -146,13 +291,13 @@ function MobileMoreSheet({
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm md:hidden"
+        className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm md:hidden"
         onClick={onClose}
       />
 
       {/* Sheet */}
       <div className="fixed bottom-0 inset-x-0 z-[70] md:hidden animate-slide-up">
-        <div className="bg-card border-t-2 border-primary/30 rounded-t-2xl px-4 pt-3 pb-6 safe-area-bottom">
+        <div className="bg-card border-t border-primary/20 rounded-t-2xl px-4 pt-3 pb-6 safe-area-bottom">
           <div className="flex items-center justify-between mb-4">
             <span className="text-sm font-semibold text-foreground/80">More</span>
             <button
@@ -190,38 +335,63 @@ function MobileMoreSheet({
   );
 }
 
+/* ── Mobile Header ─────────────────────────────────── */
+
+function MobileHeader({ location }: { location: string }) {
+  return (
+    <header className="sticky top-0 z-50 md:hidden border-b border-primary/20 bg-background/90 backdrop-blur-xl">
+      <div className="px-4 py-3 flex items-center gap-2">
+        <Link href="/">
+          <div className="flex items-center gap-2 cursor-pointer" data-testid="logo-link-mobile">
+            <VaultLogo />
+            <span className="font-display text-base font-bold tracking-tight text-primary">
+              Sabrina's Vault
+            </span>
+          </div>
+        </Link>
+      </div>
+    </header>
+  );
+}
+
 /* ── Main layout ───────────────────────────────────── */
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [moreOpen, setMoreOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
-    <div className="flex flex-col min-h-screen">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b-2 border-primary/40 bg-gradient-to-b from-card/95 to-card/80 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Link href="/">
-            <div className="flex items-center gap-2 cursor-pointer" data-testid="logo-link">
-              <MtgLogo />
-              <span className="text-lg font-bold tracking-tight text-primary">
-                Sabrina's Vault
-              </span>
-            </div>
-          </Link>
-          <DesktopNav location={location} />
-        </div>
-      </header>
+    <div className="flex min-h-screen">
+      {/* Desktop sidebar */}
+      <DesktopSidebar
+        location={location}
+        collapsed={sidebarCollapsed}
+        onToggle={() => setSidebarCollapsed((p) => !p)}
+      />
 
-      {/* Main content — extra bottom padding on mobile for the tab bar */}
-      <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-4 md:py-6 pb-20 md:pb-6">
-        {children}
-      </main>
+      {/* Main content area */}
+      <div
+        className={`flex flex-col flex-1 min-h-screen transition-all duration-300 ${
+          sidebarCollapsed ? "lg:ml-[68px]" : "lg:ml-[220px]"
+        }`}
+      >
+        {/* Mobile header */}
+        <MobileHeader location={location} />
 
-      {/* Footer (hidden on mobile — tab bar takes its place) */}
-      <footer className="hidden md:block border-t border-border py-4 px-4 text-center">
-        <PerplexityAttribution />
-      </footer>
+        {/* Tablet top nav */}
+        <TabletTopNav location={location} />
+
+        {/* Main content */}
+        <main className="flex-1 w-full max-w-[1200px] mx-auto px-4 py-4 md:py-6 pb-20 md:pb-6 lg:px-6 lg:py-8">
+          {children}
+        </main>
+
+        {/* Footer (desktop only, not in sidebar) */}
+        <footer className="hidden md:block lg:hidden border-t border-border py-4 px-4 text-center">
+          <PerplexityAttribution />
+        </footer>
+      </div>
 
       {/* Mobile bottom nav */}
       <MobileBottomNav location={location} onMoreOpen={() => setMoreOpen(true)} />
@@ -236,23 +406,30 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-function MtgLogo() {
+/* ── Vault Logo (premium version) ────────────────── */
+
+function VaultLogo() {
   return (
     <svg
-      width="30"
-      height="30"
-      viewBox="0 0 30 30"
+      width="32"
+      height="32"
+      viewBox="0 0 32 32"
       fill="none"
       aria-label="Sabrina's Vault"
-      className="text-primary"
+      className="flex-shrink-0"
     >
-      <circle cx="15" cy="15" r="13" stroke="currentColor" strokeWidth="1.8" />
-      <circle cx="15" cy="15" r="9.5" stroke="currentColor" strokeWidth="1" opacity="0.4" />
-      <line x1="15" y1="7" x2="15" y2="23" stroke="currentColor" strokeWidth="1.4" opacity="0.6" />
-      <line x1="7" y1="15" x2="23" y2="15" stroke="currentColor" strokeWidth="1.4" opacity="0.6" />
-      <path d="M15 10L19 15L15 20L11 15Z" fill="currentColor" opacity="0.3" />
-      <path d="M15 10L19 15L15 20L11 15Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
-      <text x="15" y="16.5" textAnchor="middle" fill="currentColor" fontSize="7" fontWeight="bold" fontFamily="serif">
+      {/* Outer ring */}
+      <circle cx="16" cy="16" r="14" stroke="hsl(43 70% 52%)" strokeWidth="1.5" opacity="0.8" />
+      {/* Inner ring */}
+      <circle cx="16" cy="16" r="10" stroke="hsl(43 70% 52%)" strokeWidth="0.8" opacity="0.25" />
+      {/* Cross lines */}
+      <line x1="16" y1="6" x2="16" y2="26" stroke="hsl(43 70% 52%)" strokeWidth="0.8" opacity="0.2" />
+      <line x1="6" y1="16" x2="26" y2="16" stroke="hsl(43 70% 52%)" strokeWidth="0.8" opacity="0.2" />
+      {/* Diamond shape */}
+      <path d="M16 9L21 16L16 23L11 16Z" fill="hsl(43 70% 52%)" opacity="0.15" />
+      <path d="M16 9L21 16L16 23L11 16Z" stroke="hsl(43 70% 52%)" strokeWidth="1.2" strokeLinejoin="round" opacity="0.7" />
+      {/* S monogram */}
+      <text x="16" y="17.5" textAnchor="middle" fill="hsl(43 70% 52%)" fontSize="8" fontWeight="bold" fontFamily="'Cabinet Grotesk', sans-serif">
         S
       </text>
     </svg>
