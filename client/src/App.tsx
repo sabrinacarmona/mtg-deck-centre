@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Switch, Route, Router } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
 import { queryClient } from "./lib/queryClient";
@@ -5,39 +6,43 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
-import SearchPage from "@/pages/search";
-import CollectionPage from "@/pages/collection";
-import DecksPage from "@/pages/decks";
-import DeckDetailPage from "@/pages/deck-detail";
-import ScannerPage from "@/pages/scanner";
-import ComparePage from "@/pages/compare";
-import WishlistPage from "@/pages/wishlist";
-import LearnPage from "@/pages/learn";
-import RivalsPage from "@/pages/rivals";
-import GameNightPage from "@/pages/game-night";
-import GoldfishPage from "@/pages/goldfish";
-import MatchupsPage from "@/pages/matchups";
 import AppLayout from "@/components/AppLayout";
+import PageLoadingSpinner from "@/components/PageLoadingSpinner";
+
+const SearchPage = lazy(() => import("@/pages/search"));
+const CollectionPage = lazy(() => import("@/pages/collection"));
+const DecksPage = lazy(() => import("@/pages/decks"));
+const DeckDetailPage = lazy(() => import("@/pages/deck-detail"));
+const ScannerPage = lazy(() => import("@/pages/scanner"));
+const ComparePage = lazy(() => import("@/pages/compare"));
+const WishlistPage = lazy(() => import("@/pages/wishlist"));
+const LearnPage = lazy(() => import("@/pages/learn"));
+const RivalsPage = lazy(() => import("@/pages/rivals"));
+const GameNightPage = lazy(() => import("@/pages/game-night"));
+const GoldfishPage = lazy(() => import("@/pages/goldfish"));
+const MatchupsPage = lazy(() => import("@/pages/matchups"));
 
 function AppRouter() {
   return (
     <AppLayout>
-      <Switch>
-        <Route path="/" component={SearchPage} />
-        <Route path="/search" component={SearchPage} />
-        <Route path="/collection" component={CollectionPage} />
-        <Route path="/decks" component={DecksPage} />
-        <Route path="/decks/:id" component={DeckDetailPage} />
-        <Route path="/compare" component={ComparePage} />
-        <Route path="/wishlist" component={WishlistPage} />
-        <Route path="/learn" component={LearnPage} />
-        <Route path="/rivals" component={RivalsPage} />
-        <Route path="/game-night" component={GameNightPage} />
-        <Route path="/goldfish" component={GoldfishPage} />
-        <Route path="/matchups" component={MatchupsPage} />
-        <Route path="/scanner" component={ScannerPage} />
-        <Route component={NotFound} />
-      </Switch>
+      <Suspense fallback={<PageLoadingSpinner />}>
+        <Switch>
+          <Route path="/" component={SearchPage} />
+          <Route path="/search" component={SearchPage} />
+          <Route path="/collection" component={CollectionPage} />
+          <Route path="/decks" component={DecksPage} />
+          <Route path="/decks/:id" component={DeckDetailPage} />
+          <Route path="/compare" component={ComparePage} />
+          <Route path="/wishlist" component={WishlistPage} />
+          <Route path="/learn" component={LearnPage} />
+          <Route path="/rivals" component={RivalsPage} />
+          <Route path="/game-night" component={GameNightPage} />
+          <Route path="/goldfish" component={GoldfishPage} />
+          <Route path="/matchups" component={MatchupsPage} />
+          <Route path="/scanner" component={ScannerPage} />
+          <Route component={NotFound} />
+        </Switch>
+      </Suspense>
     </AppLayout>
   );
 }
