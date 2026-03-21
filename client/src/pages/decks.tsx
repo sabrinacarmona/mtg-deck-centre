@@ -166,60 +166,73 @@ export default function DecksPage() {
 
       {/* Deck grid */}
       {!isLoading && deckList.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {deckList.map((deck) => {
             const cards = deckCardsMap.get(deck.id) || [];
             const commander = cards.find((c) => c.isCommander);
             const artCard = commander || cards[0];
             const artUrl = artCard?.imageNormal || artCard?.imageSmall;
+            const totalCards = cards.reduce((s, c) => s + (c.quantity || 1), 0);
             return (
-              <div
-                key={deck.id}
-                className="card-frame-gold relative overflow-hidden hover:shadow-lg hover:shadow-primary/10 transition-all group"
-                data-testid={`deck-card-${deck.id}`}
-              >
-                {/* Art background */}
-                {artUrl && (
-                  <div
-                    className="absolute inset-0 opacity-15 bg-cover bg-center"
-                    style={{ backgroundImage: `url(${artUrl})` }}
-                  />
-                )}
-                <Link href={`/decks/${deck.id}`}>
-                  <div className="cursor-pointer relative p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Layers3 className="w-5 h-5 text-primary" />
-                        <h3 className="font-semibold text-sm">{deck.name}</h3>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs bg-primary/15 text-primary px-2 py-0.5 rounded capitalize font-medium">
+              <Link key={deck.id} href={`/decks/${deck.id}`}>
+                <div
+                  className="relative overflow-hidden rounded-xl cursor-pointer group transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/40"
+                  style={{ aspectRatio: "4/3" }}
+                  data-testid={`deck-card-${deck.id}`}
+                >
+                  {/* Art background — full visibility */}
+                  {artUrl ? (
+                    <img
+                      src={artUrl}
+                      alt={deck.name}
+                      className="absolute inset-0 w-full h-full object-cover object-top"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-zinc-800 to-zinc-900" />
+                  )}
+
+                  {/* Gradient overlay — heavier at bottom for text */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+
+                  {/* Delete button */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-2 right-2 w-7 h-7 opacity-0 group-hover:opacity-100 transition-opacity text-white/60 hover:text-red-400 hover:bg-black/40 z-10"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      deleteDeck.mutate(deck.id);
+                    }}
+                    data-testid={`delete-deck-${deck.id}`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+
+                  {/* Content at bottom */}
+                  <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
+                    <h3 className="font-bold text-base text-white drop-shadow-lg">
+                      {deck.name}
+                    </h3>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <span className="text-[10px] bg-white/15 backdrop-blur-sm text-white/90 px-2 py-0.5 rounded-full capitalize font-medium">
                         {deck.format}
                       </span>
+                      <span className="text-[10px] text-white/50">
+                        {totalCards} cards
+                      </span>
                     </div>
-                    {commander && (
-                      <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
-                        <Crown className="w-3 h-3 text-primary" />
-                        {commander.name}
+                    {(commander || artCard) && (
+                      <div className="flex items-center gap-1.5 mt-2 text-[11px] text-white/70">
+                        <Crown className="w-3 h-3 text-amber-400/80" />
+                        <span className="truncate">
+                          {(commander || artCard)?.name}
+                        </span>
                       </div>
                     )}
                   </div>
-                </Link>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute top-3 right-3 w-7 h-7 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    deleteDeck.mutate(deck.id);
-                  }}
-                  data-testid={`delete-deck-${deck.id}`}
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </Button>
-              </div>
+                </div>
+              </Link>
             );
           })}
         </div>
