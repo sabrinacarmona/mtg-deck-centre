@@ -19,7 +19,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Layers3, Trash2, Crown, GitCompare, Swords } from "lucide-react";
+import { Plus, Layers3, Trash2, Crown, GitCompare, Swords, Download } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { Deck, DeckCard } from "@shared/schema";
 
 const formats = [
@@ -80,6 +81,63 @@ export default function DecksPage() {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     },
   });
+
+  const exportDeck = (deck: Deck) => {
+    const cards = deckCardsMap.get(deck.id) || [];
+    const mainCards = cards.filter((c) => c.board === "main");
+    const sideCards = cards.filter((c) => c.board === "side");
+
+    const typeOrder = ["Creatures", "Planeswalkers", "Instants", "Sorceries", "Enchantments", "Artifacts", "Lands", "Other"];
+    const categorize = (card: DeckCard): string => {
+      const rawType = card.typeLine.split("—")[0].trim();
+      if (rawType.includes("Creature")) return "Creatures";
+      if (rawType.includes("Planeswalker")) return "Planeswalkers";
+      if (rawType.includes("Instant")) return "Instants";
+      if (rawType.includes("Sorcery")) return "Sorceries";
+      if (rawType.includes("Enchantment")) return "Enchantments";
+      if (rawType.includes("Artifact")) return "Artifacts";
+      if (rawType.includes("Land")) return "Lands";
+      return "Other";
+    };
+
+    const isCommander = deck.format === "commander";
+    const commanderCards = mainCards.filter((c) => c.isCommander);
+    const nonCommanderMain = mainCards.filter((c) => !c.isCommander);
+
+    const grouped: Record<string, DeckCard[]> = {};
+    for (const card of nonCommanderMain) {
+      const type = categorize(card);
+      if (!grouped[type]) grouped[type] = [];
+      grouped[type].push(card);
+    }
+
+    let text = "";
+    if (isCommander && commanderCards.length > 0) {
+      text += "Commander\n";
+      for (const c of commanderCards) text += `${c.quantity || 1} ${c.name}\n`;
+      text += "\nDeck\n";
+    }
+    for (const type of typeOrder) {
+      if (!grouped[type]?.length) continue;
+      if (text.length > 0 && !text.endsWith("\n\n")) text += "\n";
+      text += `// ${type}\n`;
+      for (const c of grouped[type]) text += `${c.quantity || 1} ${c.name}\n`;
+    }
+    if (sideCards.length > 0) {
+      text += "\nSideboard\n";
+      for (const c of sideCards) text += `${c.quantity || 1} ${c.name}\n`;
+    }
+
+    const slug = deck.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    const blob = new Blob([text.trim()], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${slug}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: `"${deck.name}" exported` });
+  };
 
   const deleteDeck = useMutation({
     mutationFn: async (id: number) => {
@@ -205,20 +263,44 @@ export default function DecksPage() {
                   </div>
                 )}
 
-                {/* Delete button */}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute top-2 right-2 w-7 h-7 opacity-0 group-hover:opacity-100 transition-opacity text-white/60 hover:text-red-400 hover:bg-black/40 z-10"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    deleteDeck.mutate(deck.id);
-                  }}
-                  data-testid={`delete-deck-${deck.id}`}
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </Button>
+                {/* Action buttons */}
+                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="w-7 h-7 text-white/60 hover:text-primary hover:bg-black/40"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          exportDeck(deck);
+                        }}
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Export Deck</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="w-7 h-7 text-white/60 hover:text-red-400 hover:bg-black/40"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          deleteDeck.mutate(deck.id);
+                        }}
+                        data-testid={`delete-deck-${deck.id}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Delete Deck</TooltipContent>
+                  </Tooltip>
+                </div>
 
                 {/* Content at bottom */}
                 <div className="absolute bottom-0 left-0 right-0 p-4 z-10">

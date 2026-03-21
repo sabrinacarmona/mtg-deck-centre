@@ -1,6 +1,6 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { useState, useCallback, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import {
   Gamepad2,
@@ -16,21 +16,22 @@ import {
   Crown,
   ChevronDown,
   ChevronUp,
-  X,
   Trophy,
-  History,
+  Users,
 } from "lucide-react";
 import { ManaSymbol } from "@/components/ManaSymbols";
 
 /* ─── Types ────────────────────────────────────────────────────── */
 
 interface Player {
+  id: number; // 0-based index
   name: string;
+  deckId: number | null;
   deckName: string;
   commander: string;
   colors: string;
   life: number;
-  commanderDamage: Record<string, number>; // keyed by opponent commander name
+  commanderDamage: Record<string, number>; // keyed by opponent player id
   poisonCounters: number;
   energyCounters: number;
   experienceCounters: number;
@@ -57,6 +58,15 @@ const POISON_LETHAL = 10;
 const LIFE_INCREMENTS = [1, 5, 10];
 const DICE_OPTIONS = [4, 6, 8, 10, 12, 20, 100];
 
+const PLAYER_COLORS: Record<number, { border: string; bg: string; text: string; label: string }> = {
+  0: { border: "border-amber-500/50", bg: "bg-amber-500/10", text: "text-amber-400", label: "gold" },
+  1: { border: "border-red-500/50", bg: "bg-red-500/10", text: "text-red-400", label: "red" },
+  2: { border: "border-blue-500/50", bg: "bg-blue-500/10", text: "text-blue-400", label: "blue" },
+  3: { border: "border-green-500/50", bg: "bg-green-500/10", text: "text-green-400", label: "green" },
+};
+
+const DEFAULT_NAMES = ["Sabrina", "Will", "Player 3", "Player 4"];
+
 /* ─── Utility ──────────────────────────────────────────────────── */
 
 function getColorSymbols(colors: string): string[] {
@@ -64,47 +74,45 @@ function getColorSymbols(colors: string): string[] {
   return colors.split("").filter((c) => map[c]).map((c) => map[c]);
 }
 
+function makePlayer(id: number, name: string): Player {
+  return {
+    id,
+    name,
+    deckId: null,
+    deckName: "",
+    commander: "",
+    colors: "",
+    life: STARTING_LIFE,
+    commanderDamage: {},
+    poisonCounters: 0,
+    energyCounters: 0,
+    experienceCounters: 0,
+  };
+}
+
 /* ─── Components ───────────────────────────────────────────────── */
 
-function LifeCounter({
+function SmallCounter({
   value,
   onChange,
   label,
   icon: Icon,
-  color = "primary",
   lethalAt,
+  color,
 }: {
   value: number;
   onChange: (v: number) => void;
   label: string;
   icon: React.ElementType;
-  color?: string;
   lethalAt?: number;
+  color?: string;
 }) {
   const isLethal = lethalAt !== undefined && value >= lethalAt;
-  const holdTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const startHold = (delta: number) => {
-    onChange(value + delta);
-    holdTimer.current = setInterval(() => {
-      onChange((prev: number) => prev + delta);
-    }, 150);
-  };
-
-  const stopHold = () => {
-    if (holdTimer.current) {
-      clearInterval(holdTimer.current);
-      holdTimer.current = null;
-    }
-  };
-
-  // Because onChange with prev won't work outside state, we use a simpler hold
-  useEffect(() => () => stopHold(), []);
 
   return (
     <div className={`flex items-center gap-2 ${isLethal ? "animate-pulse" : ""}`}>
       <div className="flex items-center gap-1.5 min-w-[100px]">
-        <Icon className={`w-4 h-4 ${isLethal ? "text-red-500" : "text-muted-foreground"}`} />
+        <Icon className={`w-4 h-4 ${isLethal ? "text-red-500" : color || "text-muted-foreground"}`} />
         <span className={`text-xs font-medium ${isLethal ? "text-red-500" : "text-muted-foreground"}`}>
           {label}
           {isLethal && " ☠"}
@@ -118,7 +126,7 @@ function LifeCounter({
       </button>
       <span
         className={`w-10 text-center font-mono font-bold text-lg ${
-          isLethal ? "text-red-500" : "text-foreground"
+          isLethal ? "text-red-500" : color || "text-foreground"
         }`}
       >
         {value}
@@ -135,21 +143,25 @@ function LifeCounter({
 
 function PlayerCard({
   player,
-  opponent,
+  allPlayers,
   onUpdate,
   isActive,
 }: {
   player: Player;
-  opponent: Player;
+  allPlayers: Player[];
   onUpdate: (updates: Partial<Player>) => void;
   isActive: boolean;
 }) {
   const [showCounters, setShowCounters] = useState(false);
   const colorSymbols = getColorSymbols(player.colors);
+  const opponents = allPlayers.filter((p) => p.id !== player.id);
+  const pColor = PLAYER_COLORS[player.id] || PLAYER_COLORS[0];
+
   const isLifeLethal = player.life <= 0;
   const isPoisonLethal = player.poisonCounters >= POISON_LETHAL;
-  const cmdDmgFromOpponent = player.commanderDamage[opponent.commander] || 0;
-  const isCmdLethal = cmdDmgFromOpponent >= COMMANDER_DAMAGE_LETHAL;
+  const isCmdLethal = opponents.some(
+    (opp) => (player.commanderDamage[String(opp.id)] || 0) >= COMMANDER_DAMAGE_LETHAL
+  );
   const isDead = isLifeLethal || isPoisonLethal || isCmdLethal;
 
   return (
@@ -158,15 +170,15 @@ function PlayerCard({
         isDead
           ? "border-red-500/60 bg-red-950/10"
           : isActive
-          ? "border-primary/60 bg-card shadow-lg shadow-primary/10"
+          ? `${pColor.border} bg-card shadow-lg`
           : "border-border bg-card"
       }`}
     >
       {/* Player header */}
-      <div className="p-4 border-b border-border/50">
+      <div className="p-3 sm:p-4 border-b border-border/50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Crown className={`w-4 h-4 ${isDead ? "text-red-500" : "text-primary"}`} />
+            <Crown className={`w-4 h-4 ${isDead ? "text-red-500" : pColor.text}`} />
             <h3 className="font-bold text-lg">{player.name}</h3>
             {isDead && (
               <span className="text-xs font-bold text-red-500 bg-red-500/10 px-2 py-0.5 rounded">
@@ -176,19 +188,19 @@ function PlayerCard({
           </div>
           <div className="flex items-center gap-1">
             {colorSymbols.map((s, i) => (
-              <ManaSymbol key={i} symbol={s} size={18} />
+              <ManaSymbol key={i} symbol={s} size="md" />
             ))}
           </div>
         </div>
-        <div className="text-xs text-muted-foreground mt-1">
+        <div className="text-xs text-muted-foreground mt-1 truncate">
           {player.deckName} — {player.commander}
         </div>
       </div>
 
       {/* Life total — BIG */}
-      <div className="p-4 sm:p-6 flex items-center justify-center gap-2 sm:gap-4">
+      <div className="p-3 sm:p-5 flex items-center justify-center gap-2 sm:gap-3">
         <div className="flex gap-1">
-          {LIFE_INCREMENTS.reverse().map((inc) => (
+          {[10, 5, 1].map((inc) => (
             <button
               key={`minus-${inc}`}
               className="px-2 py-1.5 sm:px-2.5 sm:py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold text-xs sm:text-sm transition-colors"
@@ -209,7 +221,7 @@ function PlayerCard({
           <div className="text-[10px] sm:text-xs text-muted-foreground mt-1">Life</div>
         </div>
         <div className="flex gap-1">
-          {[...LIFE_INCREMENTS].reverse().map((inc) => (
+          {[1, 5, 10].map((inc) => (
             <button
               key={`plus-${inc}`}
               className="px-2 py-1.5 sm:px-2.5 sm:py-2 rounded-lg bg-green-500/10 hover:bg-green-500/20 text-green-400 font-bold text-xs sm:text-sm transition-colors"
@@ -221,50 +233,87 @@ function PlayerCard({
         </div>
       </div>
 
-      {/* Commander damage from opponent */}
-      <div className="px-4 pb-3">
-        <LifeCounter
-          value={cmdDmgFromOpponent}
-          onChange={(v) =>
-            onUpdate({
-              commanderDamage: { ...player.commanderDamage, [opponent.commander]: v },
-            })
-          }
-          label={`Cmd dmg (${opponent.commander.split(",")[0]})`}
-          icon={Skull}
-          lethalAt={COMMANDER_DAMAGE_LETHAL}
-        />
+      {/* Poison counter — always visible */}
+      <div className="px-3 sm:px-4 pb-2">
+        <div className={`flex items-center gap-2 ${isPoisonLethal ? "animate-pulse" : ""}`}>
+          <div className="flex items-center gap-1.5 min-w-[100px]">
+            <Skull className={`w-4 h-4 ${isPoisonLethal ? "text-red-500" : "text-green-400"}`} />
+            <span className={`text-xs font-medium ${isPoisonLethal ? "text-red-500 font-bold" : "text-green-400"}`}>
+              Poison{isPoisonLethal && " ☠"}
+            </span>
+          </div>
+          <button
+            className="w-7 h-7 rounded-md bg-muted hover:bg-muted/80 flex items-center justify-center text-foreground transition-colors"
+            onClick={() => onUpdate({ poisonCounters: Math.max(0, player.poisonCounters - 1) })}
+          >
+            <Minus className="w-3.5 h-3.5" />
+          </button>
+          <span
+            className={`w-10 text-center font-mono font-bold text-lg ${
+              isPoisonLethal ? "text-red-500" : player.poisonCounters > 0 ? "text-green-400" : "text-muted-foreground"
+            }`}
+          >
+            {player.poisonCounters}
+          </span>
+          <button
+            className="w-7 h-7 rounded-md bg-muted hover:bg-muted/80 flex items-center justify-center text-foreground transition-colors"
+            onClick={() => onUpdate({ poisonCounters: player.poisonCounters + 1 })}
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
+        </div>
+        {isPoisonLethal && (
+          <div className="mt-1 text-xs font-bold text-red-500 bg-red-500/10 px-2 py-1 rounded text-center animate-pulse">
+            POISONED — {player.name} loses!
+          </div>
+        )}
       </div>
 
-      {/* Expandable counters */}
-      <div className="px-4 pb-4">
+      {/* Commander damage from each opponent */}
+      <div className="px-3 sm:px-4 pb-2 space-y-1">
+        {opponents.map((opp) => {
+          const dmg = player.commanderDamage[String(opp.id)] || 0;
+          const oppColor = PLAYER_COLORS[opp.id] || PLAYER_COLORS[0];
+          return (
+            <SmallCounter
+              key={opp.id}
+              value={dmg}
+              onChange={(v) =>
+                onUpdate({
+                  commanderDamage: { ...player.commanderDamage, [String(opp.id)]: v },
+                })
+              }
+              label={`Cmd (${opp.commander.split(",")[0].slice(0, 12)})`}
+              icon={Shield}
+              lethalAt={COMMANDER_DAMAGE_LETHAL}
+              color={oppColor.text}
+            />
+          );
+        })}
+      </div>
+
+      {/* Expandable extra counters */}
+      <div className="px-3 sm:px-4 pb-3">
         <button
           className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors mb-2"
           onClick={() => setShowCounters(!showCounters)}
         >
           {showCounters ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-          Counters
+          More Counters
         </button>
         {showCounters && (
           <div className="space-y-2">
-            <LifeCounter
-              value={player.poisonCounters}
-              onChange={(v) => onUpdate({ poisonCounters: v })}
-              label="Poison"
-              icon={FlaskConical}
-              lethalAt={POISON_LETHAL}
-            />
-            <LifeCounter
+            <SmallCounter
               value={player.energyCounters}
               onChange={(v) => onUpdate({ energyCounters: v })}
               label="Energy"
               icon={Zap}
             />
-            <LifeCounter
+            <SmallCounter
               value={player.experienceCounters}
               onChange={(v) => onUpdate({ experienceCounters: v })}
               label="Experience"
-              icon={Shield}
+              icon={FlaskConical}
             />
           </div>
         )}
@@ -369,13 +418,14 @@ function DiceRoller() {
 function GameSetup({
   onStart,
 }: {
-  onStart: (p1: Player, p2: Player) => void;
+  onStart: (players: Player[]) => void;
 }) {
+  const [playerCount, setPlayerCount] = useState(2);
+
   const { data: decks = [] } = useQuery<any[]>({
     queryKey: ["/api/decks"],
   });
 
-  // Fetch deck cards for each deck to find commander
   const deckCardQueries = useQuery({
     queryKey: ["/api/deck-cards-all", decks.map((d: any) => d.id).join(",")],
     queryFn: async () => {
@@ -403,44 +453,91 @@ function GameSetup({
     return cmd?.colorIdentity || "";
   };
 
-  // Separate user decks vs Will's decks
-  const userDecks = decks.filter((d: any) => !d.name.startsWith("Will's"));
-  const willDecks = decks.filter((d: any) => d.name.startsWith("Will's"));
+  const allDecks = decks;
 
-  const [p1Deck, setP1Deck] = useState<number | null>(null);
-  const [p2Deck, setP2Deck] = useState<number | null>(null);
-  const [p2Name, setP2Name] = useState("Will");
+  const [selectedDecks, setSelectedDecks] = useState<(number | null)[]>([null, null, null, null]);
+  const [playerNames, setPlayerNames] = useState<string[]>(["Sabrina", "Will", "Player 3", "Player 4"]);
 
-  const canStart = p1Deck !== null && p2Deck !== null;
+  const setDeck = (idx: number, deckId: number | null) => {
+    setSelectedDecks((prev) => {
+      const next = [...prev];
+      next[idx] = deckId;
+      return next;
+    });
+  };
+
+  const setName = (idx: number, name: string) => {
+    setPlayerNames((prev) => {
+      const next = [...prev];
+      next[idx] = name;
+      return next;
+    });
+  };
+
+  const canStart = selectedDecks.slice(0, playerCount).every((d) => d !== null);
 
   const handleStart = () => {
     if (!canStart) return;
-    const d1 = decks.find((d: any) => d.id === p1Deck)!;
-    const d2 = decks.find((d: any) => d.id === p2Deck)!;
+    const players: Player[] = [];
+    for (let i = 0; i < playerCount; i++) {
+      const deckId = selectedDecks[i]!;
+      const deck = decks.find((d: any) => d.id === deckId)!;
+      players.push({
+        id: i,
+        name: playerNames[i] || DEFAULT_NAMES[i],
+        deckId,
+        deckName: deck.name,
+        commander: getCommander(deck.id),
+        colors: getColors(deck.id),
+        life: STARTING_LIFE,
+        commanderDamage: {},
+        poisonCounters: 0,
+        energyCounters: 0,
+        experienceCounters: 0,
+      });
+    }
+    onStart(players);
+  };
 
-    onStart(
-      {
-        name: "Sabrina",
-        deckName: d1.name,
-        commander: getCommander(d1.id),
-        colors: getColors(d1.id),
-        life: STARTING_LIFE,
-        commanderDamage: {},
-        poisonCounters: 0,
-        energyCounters: 0,
-        experienceCounters: 0,
-      },
-      {
-        name: p2Name || "Opponent",
-        deckName: d2.name,
-        commander: getCommander(d2.id),
-        colors: getColors(d2.id),
-        life: STARTING_LIFE,
-        commanderDamage: {},
-        poisonCounters: 0,
-        energyCounters: 0,
-        experienceCounters: 0,
-      }
+  const renderDeckPicker = (playerIdx: number) => {
+    const isP1 = playerIdx === 0;
+    const pColor = PLAYER_COLORS[playerIdx];
+
+    return (
+      <div
+        key={playerIdx}
+        className={`rounded-xl border-2 ${pColor.border} bg-card p-4 sm:p-5 space-y-3`}
+      >
+        <div className="flex items-center gap-2">
+          <Crown className={`w-4 h-4 ${pColor.text}`} />
+          {isP1 ? (
+            <h2 className="font-bold">Sabrina</h2>
+          ) : (
+            <input
+              value={playerNames[playerIdx]}
+              onChange={(e) => setName(playerIdx, e.target.value)}
+              className="font-bold bg-transparent border-none outline-none text-foreground w-full"
+              placeholder={DEFAULT_NAMES[playerIdx]}
+            />
+          )}
+        </div>
+        <div className="space-y-2 max-h-48 overflow-y-auto">
+          {allDecks.map((d: any) => (
+            <button
+              key={d.id}
+              onClick={() => setDeck(playerIdx, d.id)}
+              className={`w-full text-left px-3 py-2.5 rounded-lg border transition-all text-sm ${
+                selectedDecks[playerIdx] === d.id
+                  ? `${pColor.border} ${pColor.bg} ${pColor.text} font-semibold`
+                  : "border-border hover:border-primary/30 text-foreground"
+              }`}
+            >
+              <div className="font-medium">{d.name}</div>
+              <div className="text-xs text-muted-foreground mt-0.5">{getCommander(d.id)}</div>
+            </button>
+          ))}
+        </div>
+      </div>
     );
   };
 
@@ -454,81 +551,28 @@ function GameSetup({
         <p className="text-sm text-muted-foreground">Pick your decks and start tracking</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-        {/* Player 1 — Sabrina */}
-        <div className="rounded-xl border-2 border-primary/30 bg-card p-5 space-y-3">
-          <div className="flex items-center gap-2">
-            <Crown className="w-4 h-4 text-primary" />
-            <h2 className="font-bold">Sabrina</h2>
-          </div>
-          <div className="space-y-2">
-            {userDecks.map((d: any) => (
-              <button
-                key={d.id}
-                onClick={() => setP1Deck(d.id)}
-                className={`w-full text-left px-3 py-2.5 rounded-lg border transition-all text-sm ${
-                  p1Deck === d.id
-                    ? "border-primary bg-primary/10 text-primary font-semibold"
-                    : "border-border hover:border-primary/30 text-foreground"
-                }`}
-              >
-                <div className="font-medium">{d.name}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">{getCommander(d.id)}</div>
-              </button>
-            ))}
-          </div>
-        </div>
+      {/* Player count selector */}
+      <div className="flex items-center justify-center gap-2">
+        <Users className="w-4 h-4 text-muted-foreground" />
+        <span className="text-sm font-medium text-muted-foreground">Players:</span>
+        {[2, 3, 4].map((n) => (
+          <button
+            key={n}
+            onClick={() => setPlayerCount(n)}
+            className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${
+              playerCount === n
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            {n}
+          </button>
+        ))}
+      </div>
 
-        {/* Player 2 — Opponent */}
-        <div className="rounded-xl border-2 border-border bg-card p-5 space-y-3">
-          <div className="flex items-center gap-2">
-            <Skull className="w-4 h-4 text-muted-foreground" />
-            <input
-              value={p2Name}
-              onChange={(e) => setP2Name(e.target.value)}
-              className="font-bold bg-transparent border-none outline-none text-foreground w-full"
-              placeholder="Opponent name"
-            />
-          </div>
-          <div className="space-y-2">
-            {willDecks.length > 0 && (
-              <div className="text-xs text-muted-foreground mb-1">Will's decks</div>
-            )}
-            {willDecks.map((d: any) => (
-              <button
-                key={d.id}
-                onClick={() => setP2Deck(d.id)}
-                className={`w-full text-left px-3 py-2.5 rounded-lg border transition-all text-sm ${
-                  p2Deck === d.id
-                    ? "border-primary bg-primary/10 text-primary font-semibold"
-                    : "border-border hover:border-primary/30 text-foreground"
-                }`}
-              >
-                <div className="font-medium">{d.name.replace("Will's ", "")}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">{getCommander(d.id)}</div>
-              </button>
-            ))}
-            {userDecks.length > 0 && (
-              <>
-                <div className="text-xs text-muted-foreground mt-2 mb-1">Your decks</div>
-                {userDecks.map((d: any) => (
-                  <button
-                    key={d.id}
-                    onClick={() => setP2Deck(d.id)}
-                    className={`w-full text-left px-3 py-2.5 rounded-lg border transition-all text-sm ${
-                      p2Deck === d.id
-                        ? "border-primary bg-primary/10 text-primary font-semibold"
-                        : "border-border hover:border-primary/30 text-foreground"
-                    }`}
-                  >
-                    <div className="font-medium">{d.name}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">{getCommander(d.id)}</div>
-                  </button>
-                ))}
-              </>
-            )}
-          </div>
-        </div>
+      {/* Player deck pickers */}
+      <div className={`grid grid-cols-1 ${playerCount <= 2 ? "md:grid-cols-2" : "md:grid-cols-2"} gap-4 sm:gap-6 max-w-4xl mx-auto`}>
+        {Array.from({ length: playerCount }, (_, i) => renderDeckPicker(i))}
       </div>
 
       <div className="text-center">
@@ -573,24 +617,29 @@ function MatchTimer() {
 /* ─── Game screen ──────────────────────────────────────────────── */
 
 function GamePlaying({
-  p1,
-  p2,
-  onUpdateP1,
-  onUpdateP2,
+  players,
+  onUpdatePlayer,
   onReset,
   onEnd,
   turnCount,
   onNextTurn,
 }: {
-  p1: Player;
-  p2: Player;
-  onUpdateP1: (u: Partial<Player>) => void;
-  onUpdateP2: (u: Partial<Player>) => void;
+  players: Player[];
+  onUpdatePlayer: (idx: number, u: Partial<Player>) => void;
   onReset: () => void;
   onEnd: (winner: string) => void;
   turnCount: number;
   onNextTurn: () => void;
 }) {
+  const activePlayerIdx = (turnCount - 1) % players.length;
+
+  const gridClass =
+    players.length === 2
+      ? "grid-cols-1 md:grid-cols-2"
+      : players.length === 3
+      ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+      : "grid-cols-1 md:grid-cols-2";
+
   return (
     <div className="space-y-4">
       {/* Top bar */}
@@ -615,34 +664,40 @@ function GamePlaying({
       </div>
 
       {/* Player panels */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <PlayerCard player={p1} opponent={p2} onUpdate={onUpdateP1} isActive={turnCount % 2 === 1} />
-        <PlayerCard player={p2} opponent={p1} onUpdate={onUpdateP2} isActive={turnCount % 2 === 0} />
+      <div className={`grid ${gridClass} gap-4`}>
+        {players.map((player, idx) => (
+          <PlayerCard
+            key={player.id}
+            player={player}
+            allPlayers={players}
+            onUpdate={(u) => onUpdatePlayer(idx, u)}
+            isActive={idx === activePlayerIdx}
+          />
+        ))}
       </div>
 
-      {/* Dice and utilities */}
+      {/* Dice and end game */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <DiceRoller />
 
-        {/* Quick actions */}
         <div className="rounded-xl border-2 border-border bg-card p-4">
           <div className="flex items-center gap-2 mb-3">
             <Trophy className="w-4 h-4 text-primary" />
             <h3 className="font-semibold text-sm">End Game</h3>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => onEnd(p1.name)}
-              className="px-3 py-3 rounded-lg bg-green-500/10 hover:bg-green-500/20 text-green-400 font-bold text-sm transition-all border border-green-500/20"
-            >
-              🏆 {p1.name} Wins
-            </button>
-            <button
-              onClick={() => onEnd(p2.name)}
-              className="px-3 py-3 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold text-sm transition-all border border-red-500/20"
-            >
-              🏆 {p2.name} Wins
-            </button>
+          <div className={`grid ${players.length <= 2 ? "grid-cols-2" : "grid-cols-2"} gap-2`}>
+            {players.map((player) => {
+              const pColor = PLAYER_COLORS[player.id] || PLAYER_COLORS[0];
+              return (
+                <button
+                  key={player.id}
+                  onClick={() => onEnd(player.name)}
+                  className={`px-3 py-3 rounded-lg ${pColor.bg} hover:opacity-80 ${pColor.text} font-bold text-sm transition-all border ${pColor.border}`}
+                >
+                  🏆 {player.name}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -655,14 +710,12 @@ function GamePlaying({
 function GameOver({
   winner,
   turnCount,
-  p1,
-  p2,
+  players,
   onNewGame,
 }: {
   winner: string;
   turnCount: number;
-  p1: Player;
-  p2: Player;
+  players: Player[];
   onNewGame: () => void;
 }) {
   return (
@@ -672,22 +725,30 @@ function GameOver({
       </div>
       <div>
         <h1 className="text-3xl font-display font-black text-primary">{winner} Wins!</h1>
-        <p className="text-muted-foreground mt-2">
-          Game ended on Turn {turnCount}
-        </p>
+        <p className="text-muted-foreground mt-2">Game ended on Turn {turnCount}</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
-        <div className="rounded-xl border border-border bg-card p-4 text-center">
-          <div className="text-sm text-muted-foreground">{p1.name}</div>
-          <div className="text-2xl font-mono font-bold mt-1">{p1.life}</div>
-          <div className="text-xs text-muted-foreground">life remaining</div>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-4 text-center">
-          <div className="text-sm text-muted-foreground">{p2.name}</div>
-          <div className="text-2xl font-mono font-bold mt-1">{p2.life}</div>
-          <div className="text-xs text-muted-foreground">life remaining</div>
-        </div>
+      <div className={`grid ${players.length <= 2 ? "grid-cols-2" : players.length === 3 ? "grid-cols-3" : "grid-cols-2 sm:grid-cols-4"} gap-3 max-w-2xl mx-auto`}>
+        {players.map((p) => {
+          const pColor = PLAYER_COLORS[p.id] || PLAYER_COLORS[0];
+          const isWinner = p.name === winner;
+          return (
+            <div
+              key={p.id}
+              className={`rounded-xl border bg-card p-4 text-center ${
+                isWinner ? `${pColor.border} ring-2 ring-primary/30` : "border-border"
+              }`}
+            >
+              <div className="text-sm text-muted-foreground">{p.name}</div>
+              <div className="text-2xl font-mono font-bold mt-1">{p.life}</div>
+              <div className="text-xs text-muted-foreground">life</div>
+              {p.poisonCounters > 0 && (
+                <div className="text-xs text-green-400 mt-1">☠ {p.poisonCounters} poison</div>
+              )}
+              {isWinner && <div className="text-xs text-primary font-bold mt-1">Winner!</div>}
+            </div>
+          );
+        })}
       </div>
 
       <Button onClick={onNewGame} size="lg" className="px-8 font-bold">
@@ -702,56 +763,73 @@ function GameOver({
 
 export default function GameNightPage() {
   const [phase, setPhase] = useState<GamePhase>("setup");
-  const [p1, setP1] = useState<Player | null>(null);
-  const [p2, setP2] = useState<Player | null>(null);
+  const [players, setPlayers] = useState<Player[]>([]);
   const [turnCount, setTurnCount] = useState(1);
   const [winner, setWinner] = useState<string | null>(null);
 
-  const handleStart = (player1: Player, player2: Player) => {
-    setP1(player1);
-    setP2(player2);
+  const handleStart = (gamePlayers: Player[]) => {
+    setPlayers(gamePlayers);
     setTurnCount(1);
     setPhase("playing");
   };
 
-  const updateP1 = useCallback((updates: Partial<Player>) => {
-    setP1((prev) => (prev ? { ...prev, ...updates } : prev));
-  }, []);
-
-  const updateP2 = useCallback((updates: Partial<Player>) => {
-    setP2((prev) => (prev ? { ...prev, ...updates } : prev));
+  const updatePlayer = useCallback((idx: number, updates: Partial<Player>) => {
+    setPlayers((prev) => {
+      const next = [...prev];
+      next[idx] = { ...next[idx], ...updates };
+      return next;
+    });
   }, []);
 
   const handleReset = () => {
-    if (p1 && p2) {
-      setP1({
-        ...p1,
+    setPlayers((prev) =>
+      prev.map((p) => ({
+        ...p,
         life: STARTING_LIFE,
         commanderDamage: {},
         poisonCounters: 0,
         energyCounters: 0,
         experienceCounters: 0,
-      });
-      setP2({
-        ...p2,
-        life: STARTING_LIFE,
-        commanderDamage: {},
-        poisonCounters: 0,
-        energyCounters: 0,
-        experienceCounters: 0,
-      });
-      setTurnCount(1);
-    }
+      }))
+    );
+    setTurnCount(1);
   };
+
+  // Record game result to history for each relevant deck
+  const addHistory = useMutation({
+    mutationFn: async ({ deckId, entry }: { deckId: number; entry: { date: string; opponent: string; result: "win" | "loss" | "draw"; notes: string } }) => {
+      const res = await apiRequest("POST", `/api/decks/${deckId}/history`, entry);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/decks"] });
+    },
+  });
 
   const handleEnd = (winnerName: string) => {
     setWinner(winnerName);
     setPhase("finished");
+
+    // Record game history for each player's deck
+    const date = new Date().toISOString().split("T")[0];
+    for (const player of players) {
+      if (!player.deckId) continue;
+      const others = players.filter((p) => p.id !== player.id).map((p) => p.name).join(", ");
+      const result = player.name === winnerName ? "win" : "loss";
+      addHistory.mutate({
+        deckId: player.deckId,
+        entry: {
+          date,
+          opponent: others,
+          result: result as "win" | "loss" | "draw",
+          notes: `Game Night — Turn ${turnCount}`,
+        },
+      });
+    }
   };
 
   const handleNewGame = () => {
-    setP1(null);
-    setP2(null);
+    setPlayers([]);
     setTurnCount(1);
     setWinner(null);
     setPhase("setup");
@@ -761,17 +839,15 @@ export default function GameNightPage() {
     return <GameSetup onStart={handleStart} />;
   }
 
-  if (phase === "finished" && p1 && p2 && winner) {
-    return <GameOver winner={winner} turnCount={turnCount} p1={p1} p2={p2} onNewGame={handleNewGame} />;
+  if (phase === "finished" && players.length > 0 && winner) {
+    return <GameOver winner={winner} turnCount={turnCount} players={players} onNewGame={handleNewGame} />;
   }
 
-  if (phase === "playing" && p1 && p2) {
+  if (phase === "playing" && players.length > 0) {
     return (
       <GamePlaying
-        p1={p1}
-        p2={p2}
-        onUpdateP1={updateP1}
-        onUpdateP2={updateP2}
+        players={players}
+        onUpdatePlayer={updatePlayer}
         onReset={handleReset}
         onEnd={handleEnd}
         turnCount={turnCount}

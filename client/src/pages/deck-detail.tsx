@@ -8,12 +8,20 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Trophy,
   PlusCircle,
   Trash2,
   Droplets,
   ChevronUp,
   ChevronDown,
+  Copy,
+  Download,
 } from "lucide-react";
 import ImportDialog from "@/components/ImportDialog";
 import ManaAnalyzer from "@/components/ManaAnalyzer";
@@ -49,6 +57,7 @@ export default function DeckDetailPage() {
   const [manaAnalysisOpen, setManaAnalysisOpen] = useState(false);
   const [combosOpen, setCombosOpen] = useState(false);
   const [upgradesOpen, setUpgradesOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const { toast } = useToast();
 
   const { data: deck } = useQuery<Deck>({
@@ -168,33 +177,54 @@ export default function DeckDetailPage() {
 
   const handleExport = () => {
     const typeOrder = ["Creatures", "Planeswalkers", "Instants", "Sorceries", "Enchantments", "Artifacts", "Lands", "Other"];
-    const grouped: Record<string, DeckCard[]> = {};
-    for (const card of mainCards) {
+
+    const categorize = (card: DeckCard): string => {
       const rawType = card.typeLine.split("—")[0].trim();
-      let type = "Other";
-      if (rawType.includes("Creature")) type = "Creatures";
-      else if (rawType.includes("Instant")) type = "Instants";
-      else if (rawType.includes("Sorcery")) type = "Sorceries";
-      else if (rawType.includes("Enchantment")) type = "Enchantments";
-      else if (rawType.includes("Artifact")) type = "Artifacts";
-      else if (rawType.includes("Planeswalker")) type = "Planeswalkers";
-      else if (rawType.includes("Land")) type = "Lands";
+      if (rawType.includes("Creature")) return "Creatures";
+      if (rawType.includes("Planeswalker")) return "Planeswalkers";
+      if (rawType.includes("Instant")) return "Instants";
+      if (rawType.includes("Sorcery")) return "Sorceries";
+      if (rawType.includes("Enchantment")) return "Enchantments";
+      if (rawType.includes("Artifact")) return "Artifacts";
+      if (rawType.includes("Land")) return "Lands";
+      return "Other";
+    };
+
+    const isCommander = deck?.format === "commander";
+    const commanderCards = mainCards.filter((c) => c.isCommander);
+    const nonCommanderMain = mainCards.filter((c) => !c.isCommander);
+
+    const grouped: Record<string, DeckCard[]> = {};
+    for (const card of nonCommanderMain) {
+      const type = categorize(card);
       if (!grouped[type]) grouped[type] = [];
       grouped[type].push(card);
     }
+
     let text = "";
+
+    if (isCommander && commanderCards.length > 0) {
+      text += "Commander\n";
+      for (const c of commanderCards) text += `${c.quantity || 1} ${c.name}\n`;
+      text += "\nDeck\n";
+    }
+
     for (const type of typeOrder) {
       if (!grouped[type]?.length) continue;
+      if (text.length > 0 && !text.endsWith("\n\n")) text += "\n";
       text += `// ${type}\n`;
       for (const c of grouped[type]) text += `${c.quantity || 1} ${c.name}\n`;
-      text += "\n";
     }
+
     if (sideCards.length > 0) {
-      text += "Sideboard\n";
+      text += "\nSideboard\n";
       for (const c of sideCards) text += `${c.quantity || 1} ${c.name}\n`;
     }
+
     return text.trim();
   };
+
+  const exportText = exportOpen ? handleExport() : "";
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(handleExport());
@@ -203,11 +233,12 @@ export default function DeckDetailPage() {
 
   const downloadTxt = () => {
     const text = handleExport();
+    const slug = (deck?.name || "deck").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
     const blob = new Blob([text], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${deck?.name || "deck"}.txt`;
+    a.download = `${slug}.txt`;
     a.click();
     URL.revokeObjectURL(url);
     toast({ title: "Decklist downloaded" });
@@ -233,7 +264,7 @@ export default function DeckDetailPage() {
         onToggleStats={() => setStatsOpen(!statsOpen)}
         onToggleGuide={() => setGuideOpen(!guideOpen)}
         onCopy={copyToClipboard}
-        onExport={downloadTxt}
+        onExport={() => setExportOpen(true)}
         onImport={() => setImportOpen(true)}
       />
 
@@ -398,6 +429,44 @@ export default function DeckDetailPage() {
           onToggleCommander={(id, isCommander) => toggleCommander.mutate({ id, isCommander })}
         />
       )}
+
+      {/* Export Dialog */}
+      <Dialog open={exportOpen} onOpenChange={setExportOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Export Decklist</DialogTitle>
+          </DialogHeader>
+          <textarea
+            readOnly
+            value={exportText}
+            className="flex-1 min-h-[300px] w-full rounded-md border border-input bg-muted/50 px-3 py-2 text-xs font-mono resize-none focus:outline-none"
+            onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+          />
+          <div className="flex gap-2">
+            <Button
+              className="flex-1 gap-2"
+              onClick={() => {
+                navigator.clipboard.writeText(exportText);
+                toast({ title: "Decklist copied to clipboard" });
+              }}
+            >
+              <Copy className="w-4 h-4" />
+              Copy to Clipboard
+            </Button>
+            <Button
+              variant="secondary"
+              className="flex-1 gap-2"
+              onClick={() => {
+                downloadTxt();
+                setExportOpen(false);
+              }}
+            >
+              <Download className="w-4 h-4" />
+              Download .txt
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
