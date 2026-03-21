@@ -26,8 +26,11 @@ import {
   AlertTriangle,
   Trophy,
   PlusCircle,
+  BookOpen,
+  Lightbulb,
 } from "lucide-react";
 import ImportDialog from "@/components/ImportDialog";
+import { getDeckGuide } from "@/lib/deck-guides";
 import type { Deck, DeckCard, ScryfallCard } from "@shared/schema";
 
 interface GameHistoryEntry {
@@ -50,6 +53,7 @@ export default function DeckDetailPage() {
   const [zoomedCard, setZoomedCard] = useState<DeckCard | null>(null);
   const [gameLogOpen, setGameLogOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -346,6 +350,18 @@ export default function DeckDetailPage() {
             <Download className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Export</span>
           </Button>
+          {getDeckGuide(deck.name) && (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setGuideOpen(!guideOpen)}
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Guide</span>
+              {guideOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </Button>
+          )}
           <Button
             variant="secondary"
             size="sm"
@@ -372,6 +388,9 @@ export default function DeckDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Strategy Guide */}
+      {guideOpen && deck && <StrategyGuideSection deckName={deck.name} />}
 
       {/* Board tabs — gold active */}
       <div className="flex gap-2 items-center">
@@ -858,6 +877,14 @@ function CardZoomOverlay({
             </p>
           )}
 
+          {/* Card tip */}
+          {getCardTip(card) && (
+            <div className="flex items-start gap-1.5 text-xs text-amber-300/90 bg-amber-500/15 rounded-lg px-2.5 py-1.5 max-w-xs">
+              <Lightbulb className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+              <span>{getCardTip(card)}</span>
+            </div>
+          )}
+
           {card.power && card.toughness && (
             <p className="text-sm font-semibold text-white/70">
               {card.power}/{card.toughness}
@@ -915,6 +942,135 @@ function CardZoomOverlay({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+const BASIC_LANDS = ["Plains", "Island", "Swamp", "Mountain", "Forest"];
+
+function getCardTip(card: DeckCard): string | null {
+  const oracle = (card.oracleText || "").toLowerCase();
+  const typeLine = (card.typeLine || "").toLowerCase();
+
+  if (card.isCommander) {
+    return `This is your Commander. Cast from the command zone for ${card.manaCost || "its mana cost"}. Each recast costs {2} more.`;
+  }
+  if (typeLine.includes("land") && BASIC_LANDS.includes(card.name)) {
+    const colorMap: Record<string, string> = { Plains: "white", Island: "blue", Swamp: "black", Mountain: "red", Forest: "green" };
+    return `Basic land. Tap for one ${colorMap[card.name] || ""} mana. Play one land per turn.`;
+  }
+  if (oracle.includes("counter target")) {
+    return "Counterspell \u2014 use this to stop an opponent's spell before it resolves.";
+  }
+  if (oracle.includes("double strike")) {
+    return "Double strike deals damage twice \u2014 once as first strike, once as normal combat damage.";
+  }
+  if (oracle.includes("deathtouch")) {
+    return "Deathtouch \u2014 any damage this deals to a creature destroys it.";
+  }
+  if (oracle.includes("flying")) {
+    return "Has Flying \u2014 can only be blocked by creatures with Flying or Reach.";
+  }
+  if (oracle.includes("trample")) {
+    return "Has Trample \u2014 excess combat damage carries over to the defending player.";
+  }
+  if (oracle.includes("haste")) {
+    return "Has Haste \u2014 can attack the turn it enters the battlefield.";
+  }
+  if (typeLine.includes("creature") && parseInt(card.power || "0") >= 5) {
+    return `Big threat. ${card.power} power can close games fast. Watch for removal.`;
+  }
+  if (oracle.includes("draw") && oracle.includes("card")) {
+    return "Card draw \u2014 card advantage is one of the most powerful things in Magic.";
+  }
+  if (typeLine.includes("instant")) {
+    return "Instant speed \u2014 you can cast this at any time, even on your opponent's turn.";
+  }
+  if (typeLine.includes("sorcery")) {
+    return "Sorcery \u2014 cast only during your main phase when nothing else is on the stack.";
+  }
+  if ((card.cmc || 0) <= 1) {
+    return "Low cost \u2014 great for early game or chaining multiple spells in one turn.";
+  }
+  return null;
+}
+
+function StrategyGuideSection({ deckName }: { deckName: string }) {
+  const guide = getDeckGuide(deckName);
+  if (!guide) return null;
+
+  return (
+    <div className="card-frame p-4 space-y-4">
+      <h3 className="text-sm font-semibold border-b border-primary/20 pb-1 flex items-center gap-2">
+        <BookOpen className="w-4 h-4 text-primary" />
+        Strategy Guide
+      </h3>
+
+      <p className="text-sm text-foreground/80">{guide.overview}</p>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="bg-muted/50 rounded-lg p-3">
+          <h4 className="text-xs font-semibold text-primary mb-1">Early Game (T1-4)</h4>
+          <p className="text-xs text-foreground/70">{guide.earlyGame}</p>
+        </div>
+        <div className="bg-muted/50 rounded-lg p-3">
+          <h4 className="text-xs font-semibold text-primary mb-1">Mid Game (T5-8)</h4>
+          <p className="text-xs text-foreground/70">{guide.midGame}</p>
+        </div>
+        <div className="bg-muted/50 rounded-lg p-3">
+          <h4 className="text-xs font-semibold text-primary mb-1">Late Game</h4>
+          <p className="text-xs text-foreground/70">{guide.lateGame}</p>
+        </div>
+      </div>
+
+      {guide.keyCards.length > 0 && (
+        <div>
+          <h4 className="text-xs font-semibold text-primary mb-2">Key Cards</h4>
+          <div className="space-y-1.5">
+            {guide.keyCards.map((kc) => (
+              <div key={kc.name} className="flex items-start gap-2 text-xs">
+                <span className="font-semibold text-foreground shrink-0 min-w-[140px]">{kc.name}</span>
+                <span className="text-foreground/60">{kc.tip}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {guide.combos.length > 0 && (
+        <div>
+          <h4 className="text-xs font-semibold text-primary mb-2">Key Combos & Synergies</h4>
+          <div className="space-y-2">
+            {guide.combos.map((combo, i) => (
+              <div key={i} className="bg-muted/30 rounded-lg p-2.5">
+                <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                  {combo.cards.map((c, j) => (
+                    <span key={j}>
+                      <span className="text-xs font-medium text-primary">{c}</span>
+                      {j < combo.cards.length - 1 && <span className="text-xs text-muted-foreground mx-1">+</span>}
+                    </span>
+                  ))}
+                </div>
+                <p className="text-xs text-foreground/60">{combo.explanation}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {guide.tips.length > 0 && (
+        <div>
+          <h4 className="text-xs font-semibold text-primary mb-2">Pro Tips</h4>
+          <ul className="space-y-1">
+            {guide.tips.map((tip, i) => (
+              <li key={i} className="flex items-start gap-2 text-xs text-foreground/70">
+                <Lightbulb className="w-3 h-3 text-primary shrink-0 mt-0.5" />
+                {tip}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

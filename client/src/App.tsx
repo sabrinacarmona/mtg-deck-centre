@@ -13,6 +13,7 @@ import DeckDetailPage from "@/pages/deck-detail";
 import ScannerPage from "@/pages/scanner";
 import ComparePage from "@/pages/compare";
 import WishlistPage from "@/pages/wishlist";
+import LearnPage from "@/pages/learn";
 import AppLayout from "@/components/AppLayout";
 import { initSeedIfNeeded } from "./lib/db";
 
@@ -53,6 +54,7 @@ function AppRouter() {
         <Route path="/decks/:id" component={DeckDetailPage} />
         <Route path="/compare" component={ComparePage} />
         <Route path="/wishlist" component={WishlistPage} />
+        <Route path="/learn" component={LearnPage} />
         <Route path="/scanner" component={ScannerPage} />
         <Route component={NotFound} />
       </Switch>
