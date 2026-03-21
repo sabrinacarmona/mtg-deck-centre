@@ -122,12 +122,12 @@ export default function CollectionPage() {
           <Import className="w-3.5 h-3.5" />
           Import
         </Button>
-        <div className="flex gap-1 flex-wrap">
+        <div className="flex flex-wrap gap-1.5">
           {colorFilters.map((f) => (
             <button
               key={f.key}
               onClick={() => setColorFilter(f.key)}
-              className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              className={`flex-shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                 colorFilter === f.key
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted text-muted-foreground hover:text-foreground"
@@ -212,6 +212,7 @@ export default function CollectionPage() {
                     })
                   }
                   data-testid={`qty-minus-${card.id}`}
+                  aria-label="Decrease quantity"
                 >
                   <Minus className="w-3 h-3" />
                 </Button>
@@ -229,6 +230,7 @@ export default function CollectionPage() {
                     })
                   }
                   data-testid={`qty-plus-${card.id}`}
+                  aria-label="Increase quantity"
                 >
                   <Plus className="w-3 h-3" />
                 </Button>
@@ -238,6 +240,7 @@ export default function CollectionPage() {
                   className="w-7 h-7 text-destructive hover:text-destructive"
                   onClick={() => removeCard.mutate(card.id)}
                   data-testid={`remove-${card.id}`}
+                  aria-label="Remove card"
                 >
                   <Trash2 className="w-3 h-3" />
                 </Button>

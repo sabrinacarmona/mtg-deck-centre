@@ -29,6 +29,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { ScryfallCard, Deck } from "@shared/schema";
 
 interface WishlistCard {
@@ -352,17 +353,23 @@ function SearchCardItem({
               </PopoverContent>
             </Popover>
           )}
-          <Button
-            size="sm"
-            variant="ghost"
-            className={`h-7 w-7 p-0 ${isWishlisted ? "text-primary" : "text-white/60"}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleWishlist();
-            }}
-          >
-            <Heart className={`w-3.5 h-3.5 ${isWishlisted ? "fill-current" : ""}`} />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="sm"
+                variant="ghost"
+                className={`h-7 w-7 p-0 ${isWishlisted ? "text-primary" : "text-white/60"}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleWishlist();
+                }}
+                aria-label={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
+              >
+                <Heart className={`w-3.5 h-3.5 ${isWishlisted ? "fill-current" : ""}`} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}</TooltipContent>
+          </Tooltip>
         </div>
       </div>
     </div>
