@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import CardGrid from "@/components/CardGrid";
 import CardDetailDialog from "@/components/CardDetailDialog";
-import { Search, Heart } from "lucide-react";
+import { Search, Heart, Sparkles } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -212,7 +212,7 @@ export default function SearchPage() {
       {/* Empty states */}
       {!isLoading && cards.length === 0 && debouncedQuery.length >= 2 && (
         <div className="text-center py-12">
-          <div className="text-3xl mb-3">🔮</div>
+          <Search className="w-8 h-8 mx-auto mb-3 text-muted-foreground/30" />
           <p className="text-sm text-muted-foreground">
             No cards found for "{debouncedQuery}"
           </p>
@@ -221,8 +221,10 @@ export default function SearchPage() {
 
       {!query && (
         <div className="text-center py-16">
-          <div className="text-4xl mb-4">⚡</div>
-          <h2 className="text-lg font-semibold mb-1">Search for Cards</h2>
+          <div className="w-16 h-16 mx-auto rounded-full bg-primary/15 flex items-center justify-center mb-4">
+            <Sparkles className="w-8 h-8 text-primary" />
+          </div>
+          <h2 className="text-lg font-semibold mb-1">Search the Multiverse</h2>
           <p className="text-sm text-muted-foreground max-w-sm mx-auto">
             Type a card name, type, or keyword to search the entire Magic: The
             Gathering catalog via Scryfall.
@@ -296,7 +298,7 @@ function SearchCardItem({
           {card.name}
         </div>
         {card.prices?.usd && (
-          <div className="text-emerald-400 text-xs font-medium">
+          <div className="text-amber-400 text-xs font-medium">
             ${card.prices.usd}
           </div>
         )}
@@ -341,7 +343,7 @@ function SearchCardItem({
           <Button
             size="sm"
             variant="ghost"
-            className={`h-7 w-7 p-0 ${isWishlisted ? "text-red-400" : "text-white/60"}`}
+            className={`h-7 w-7 p-0 ${isWishlisted ? "text-primary" : "text-white/60"}`}
             onClick={(e) => {
               e.stopPropagation();
               onToggleWishlist();

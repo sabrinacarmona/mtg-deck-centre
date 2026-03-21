@@ -221,13 +221,13 @@ export default function DeckDetailPage() {
         ).toFixed(1)
       : "0.0";
 
-  // Feature 3: Deck Price
+  // Deck Price
   const totalPrice = deckCards.reduce((sum, c) => {
     const price = parseFloat(c.priceUsd || "0");
     return sum + price * (c.quantity || 1);
   }, 0);
 
-  // Feature 2: Export
+  // Export
   const handleExport = () => {
     const typeOrder = ["Creatures", "Planeswalkers", "Instants", "Sorceries", "Enchantments", "Artifacts", "Lands", "Other"];
     const grouped: Record<string, DeckCard[]> = {};
@@ -310,7 +310,7 @@ export default function DeckDetailPage() {
             <span>{totalSide} side</span>
             <span>Avg CMC: {avgCmc}</span>
             {totalPrice > 0 && (
-              <span className="text-emerald-500 font-medium">
+              <span className="text-primary font-medium">
                 Est. ${totalPrice.toFixed(2)}
               </span>
             )}
@@ -359,21 +359,21 @@ export default function DeckDetailPage() {
         </div>
       </div>
 
-      {/* Collapsible stats */}
+      {/* Collapsible stats — card-frame panels */}
       {statsOpen && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="bg-card border border-card-border rounded-xl p-4 space-y-3">
-            <h3 className="text-sm font-semibold">Mana Curve</h3>
+          <div className="card-frame p-4 space-y-3">
+            <h3 className="text-sm font-semibold border-b border-primary/20 pb-1">Mana Curve</h3>
             <ManaCurve cards={mainCards} />
           </div>
-          <div className="bg-card border border-card-border rounded-xl p-4 space-y-3">
-            <h3 className="text-sm font-semibold">Colors</h3>
+          <div className="card-frame p-4 space-y-3">
+            <h3 className="text-sm font-semibold border-b border-primary/20 pb-1">Colors</h3>
             <ColorDistribution cards={mainCards} />
           </div>
         </div>
       )}
 
-      {/* Board tabs */}
+      {/* Board tabs — gold active */}
       <div className="flex gap-2 items-center">
         <button
           className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
@@ -405,7 +405,9 @@ export default function DeckDetailPage() {
         <div className="lg:col-span-3">
           {activeCards.length === 0 ? (
             <div className="text-center py-12 text-sm text-muted-foreground">
-              <div className="text-3xl mb-3">🃏</div>
+              <div className="w-12 h-12 mx-auto rounded-full bg-primary/15 flex items-center justify-center mb-3">
+                <PlusCircle className="w-6 h-6 text-primary" />
+              </div>
               No cards in {board === "main" ? "mainboard" : "sideboard"} yet.
               <br />
               Use the search panel to add cards.
@@ -667,7 +669,7 @@ function DeckVisualGrid({
     <div className="space-y-5">
       {sortedGroups.map(({ type, cards: typeCards }) => (
         <div key={type}>
-          <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-2 border-b border-primary/20 pb-1">
             {type} ({typeCards.reduce((s, c) => s + (c.quantity || 1), 0)})
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-2">
@@ -735,7 +737,7 @@ function DeckCardTile({
 
       {/* Commander crown badge */}
       {card.isCommander && (
-        <div className="absolute top-1 right-1 bg-yellow-500 text-black text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-lg">
+        <div className="absolute top-1 right-1 bg-primary text-primary-foreground text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-lg">
           <Crown className="w-3 h-3" />
         </div>
       )}
@@ -863,7 +865,7 @@ function CardZoomOverlay({
           )}
 
           {card.priceUsd && (
-            <p className="text-sm text-emerald-400 font-medium">${card.priceUsd}</p>
+            <p className="text-sm text-amber-400 font-medium">${card.priceUsd}</p>
           )}
 
           {/* Legality warning */}
@@ -878,7 +880,7 @@ function CardZoomOverlay({
           <button
             className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg transition-colors ${
               card.isCommander
-                ? "bg-yellow-500/30 text-yellow-300"
+                ? "bg-primary/30 text-amber-300"
                 : "bg-white/10 text-white/60 hover:text-white"
             }`}
             onClick={() => onToggleCommander(card.id, !card.isCommander)}

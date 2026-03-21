@@ -69,13 +69,13 @@ export default function WishlistPage() {
     <div className="space-y-4" data-testid="wishlist-page">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold flex items-center gap-2">
-          <Heart className="w-5 h-5 text-red-400" />
+          <Heart className="w-5 h-5 text-primary" />
           Wishlist
         </h1>
         {cards.length > 0 && (
           <div className="text-sm text-muted-foreground">
             {cards.length} cards &middot;{" "}
-            <span className="text-emerald-500 font-medium">${totalValue.toFixed(2)}</span>
+            <span className="text-primary font-medium">${totalValue.toFixed(2)}</span>
           </div>
         )}
       </div>
@@ -120,7 +120,7 @@ export default function WishlistPage() {
                   {card.name}
                 </div>
                 {card.priceUsd && (
-                  <div className="text-emerald-400 text-xs">${card.priceUsd}</div>
+                  <div className="text-amber-400 text-xs">${card.priceUsd}</div>
                 )}
                 <div className="flex gap-1 mt-1">
                   <Button
@@ -153,7 +153,9 @@ export default function WishlistPage() {
 
       {!isLoading && cards.length === 0 && (
         <div className="text-center py-16">
-          <Heart className="w-12 h-12 mx-auto mb-4 text-muted-foreground/30" />
+          <div className="w-16 h-16 mx-auto rounded-full bg-primary/15 flex items-center justify-center mb-4">
+            <Heart className="w-8 h-8 text-primary" />
+          </div>
           <h2 className="text-lg font-semibold mb-1">No Wishlist Cards</h2>
           <p className="text-sm text-muted-foreground max-w-sm mx-auto">
             Tap the heart icon on any card in search results to add it to your
@@ -232,7 +234,7 @@ function WishlistZoom({
           <h2 className="text-xl font-bold">{card.name}</h2>
           <p className="text-sm text-white/60">{card.typeLine}</p>
           {card.priceUsd && (
-            <p className="text-lg font-bold text-emerald-400">${card.priceUsd}</p>
+            <p className="text-lg font-bold text-amber-400">${card.priceUsd}</p>
           )}
           <p className="text-xs text-white/40">Added: {card.addedDate}</p>
           <div className="flex gap-2 mt-2">

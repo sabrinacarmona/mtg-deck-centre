@@ -80,18 +80,18 @@ export default function CollectionPage() {
 
   return (
     <div className="space-y-4" data-testid="collection-page">
-      {/* Stats bar */}
+      {/* Stats bar — card-frame style */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="bg-card border border-card-border rounded-xl p-3 text-center">
+        <div className="card-frame p-3 text-center">
           <div className="text-xl font-bold">{totalCards}</div>
           <div className="text-xs text-muted-foreground">Total Cards</div>
         </div>
-        <div className="bg-card border border-card-border rounded-xl p-3 text-center">
+        <div className="card-frame p-3 text-center">
           <div className="text-xl font-bold">{uniqueCards}</div>
           <div className="text-xs text-muted-foreground">Unique</div>
         </div>
-        <div className="bg-card border border-card-border rounded-xl p-3 text-center">
-          <div className="text-xl font-bold text-emerald-500">
+        <div className="card-frame p-3 text-center">
+          <div className="text-xl font-bold text-primary">
             ${totalValue.toFixed(2)}
           </div>
           <div className="text-xs text-muted-foreground">Est. Value</div>
@@ -188,7 +188,7 @@ export default function CollectionPage() {
                     </Badge>
                   )}
                   {card.priceUsd && (
-                    <span className="text-xs text-emerald-500 font-medium">
+                    <span className="text-xs text-primary font-medium">
                       ${card.priceUsd}
                     </span>
                   )}
@@ -246,7 +246,9 @@ export default function CollectionPage() {
       {/* Empty state */}
       {!isLoading && cards.length === 0 && (
         <div className="text-center py-16">
-          <div className="text-4xl mb-4">📚</div>
+          <div className="w-16 h-16 mx-auto rounded-full bg-primary/15 flex items-center justify-center mb-4">
+            <BookOpen className="w-8 h-8 text-primary" />
+          </div>
           <h2 className="text-lg font-semibold mb-1">No Cards Yet</h2>
           <p className="text-sm text-muted-foreground max-w-sm mx-auto">
             Search for cards and add them to your collection to track quantities
@@ -257,7 +259,7 @@ export default function CollectionPage() {
 
       {!isLoading && cards.length > 0 && filtered.length === 0 && (
         <div className="text-center py-8">
-          <div className="text-2xl mb-2">🔍</div>
+          <Search className="w-8 h-8 mx-auto mb-3 text-muted-foreground/30" />
           <p className="text-sm text-muted-foreground">
             No cards match your filters
           </p>
@@ -360,7 +362,7 @@ function CollectionCardZoom({
           )}
 
           {card.priceUsd && (
-            <p className="text-lg font-bold text-emerald-400">
+            <p className="text-lg font-bold text-amber-400">
               ${card.priceUsd}
             </p>
           )}

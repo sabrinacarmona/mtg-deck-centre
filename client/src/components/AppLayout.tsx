@@ -15,13 +15,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-md">
+      {/* Header — gold bottom border, subtle gradient */}
+      <header className="sticky top-0 z-50 border-b-2 border-primary/40 bg-gradient-to-b from-card/95 to-card/80 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link href="/">
             <div className="flex items-center gap-2 cursor-pointer" data-testid="logo-link">
               <MtgLogo />
-              <span className="text-lg font-bold tracking-tight text-foreground">
+              <span className="text-lg font-bold tracking-tight text-primary">
                 Deck Centre
               </span>
             </div>
@@ -38,7 +38,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                       isActive
                         ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                        : "text-muted-foreground hover:text-primary hover:bg-primary/10"
                     }`}
                     data-testid={`nav-${item.label.toLowerCase()}`}
                   >

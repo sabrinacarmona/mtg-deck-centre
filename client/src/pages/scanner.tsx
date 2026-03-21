@@ -195,7 +195,7 @@ export default function ScannerPage() {
     <div className="space-y-4" data-testid="scanner-page">
       <h1 className="text-xl font-bold">Card Scanner</h1>
 
-      {/* Mode toggle */}
+      {/* Mode toggle — gold active state */}
       <div className="flex gap-2">
         <Button
           variant={mode === "camera" ? "default" : "secondary"}
@@ -240,7 +240,7 @@ export default function ScannerPage() {
             </div>
           ) : (
             <>
-              <div className="relative rounded-xl overflow-hidden bg-black aspect-video">
+              <div className="relative rounded-xl overflow-hidden bg-black aspect-video card-frame-gold">
                 <video
                   ref={videoRef}
                   autoPlay
@@ -248,9 +248,9 @@ export default function ScannerPage() {
                   muted
                   className="w-full h-full object-cover"
                 />
-                {/* Viewfinder overlay */}
+                {/* Viewfinder overlay — gold corners */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="w-3/4 h-1/2 border-2 border-primary/50 rounded-xl">
+                  <div className="w-3/4 h-1/2 border-2 border-primary/40 rounded-xl">
                     <div className="absolute -top-px -left-px w-6 h-6 border-t-2 border-l-2 border-primary rounded-tl-lg" />
                     <div className="absolute -top-px -right-px w-6 h-6 border-t-2 border-r-2 border-primary rounded-tr-lg" />
                     <div className="absolute -bottom-px -left-px w-6 h-6 border-b-2 border-l-2 border-primary rounded-bl-lg" />
@@ -309,7 +309,7 @@ export default function ScannerPage() {
 
       {/* Matched card display */}
       {matchedCard && (
-        <div className="bg-card border border-card-border rounded-xl p-4">
+        <div className="card-frame p-4">
           <div className="flex gap-4">
             {(matchedCard.image_uris?.normal || matchedCard.card_faces?.[0]?.image_uris?.normal) && (
               <img
@@ -322,7 +322,7 @@ export default function ScannerPage() {
               <h3 className="font-semibold">{matchedCard.name}</h3>
               <p className="text-xs text-muted-foreground">{matchedCard.type_line}</p>
               {matchedCard.prices?.usd && (
-                <p className="text-sm text-emerald-500 font-medium">${matchedCard.prices.usd}</p>
+                <p className="text-sm text-primary font-medium">${matchedCard.prices.usd}</p>
               )}
 
               <div className="flex flex-col gap-2 pt-2">

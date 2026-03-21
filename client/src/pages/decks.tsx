@@ -170,14 +170,23 @@ export default function DecksPage() {
           {deckList.map((deck) => {
             const cards = deckCardsMap.get(deck.id) || [];
             const commander = cards.find((c) => c.isCommander);
+            const artCard = commander || cards[0];
+            const artUrl = artCard?.imageNormal || artCard?.imageSmall;
             return (
               <div
                 key={deck.id}
-                className="bg-card border border-card-border rounded-xl p-4 hover:border-primary/30 transition-colors group relative"
+                className="card-frame-gold relative overflow-hidden hover:shadow-lg hover:shadow-primary/10 transition-all group"
                 data-testid={`deck-card-${deck.id}`}
               >
+                {/* Art background */}
+                {artUrl && (
+                  <div
+                    className="absolute inset-0 opacity-15 bg-cover bg-center"
+                    style={{ backgroundImage: `url(${artUrl})` }}
+                  />
+                )}
                 <Link href={`/decks/${deck.id}`}>
-                  <div className="cursor-pointer">
+                  <div className="cursor-pointer relative p-4">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2 mb-2">
                         <Layers3 className="w-5 h-5 text-primary" />
@@ -185,13 +194,13 @@ export default function DecksPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs bg-muted px-2 py-0.5 rounded capitalize">
+                      <span className="text-xs bg-primary/15 text-primary px-2 py-0.5 rounded capitalize font-medium">
                         {deck.format}
                       </span>
                     </div>
                     {commander && (
                       <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
-                        <Crown className="w-3 h-3 text-yellow-500" />
+                        <Crown className="w-3 h-3 text-primary" />
                         {commander.name}
                       </div>
                     )}
@@ -219,7 +228,9 @@ export default function DecksPage() {
       {/* Empty state */}
       {!isLoading && deckList.length === 0 && (
         <div className="text-center py-16">
-          <div className="text-4xl mb-4">🃏</div>
+          <div className="w-16 h-16 mx-auto rounded-full bg-primary/15 flex items-center justify-center mb-4">
+            <Layers3 className="w-8 h-8 text-primary" />
+          </div>
           <h2 className="text-lg font-semibold mb-1">No Decks Yet</h2>
           <p className="text-sm text-muted-foreground max-w-sm mx-auto mb-4">
             Create your first deck, add cards, and track your mana curve, color

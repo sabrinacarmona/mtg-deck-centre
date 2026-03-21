@@ -20,8 +20,14 @@ function SeedingScreen() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
       <div className="text-center space-y-4">
-        <div className="text-4xl animate-pulse">⚡</div>
-        <h2 className="text-lg font-semibold">Setting Up Your Collection</h2>
+        <div className="w-16 h-16 mx-auto rounded-full bg-primary/20 flex items-center justify-center gold-glow">
+          <svg width="32" height="32" viewBox="0 0 28 28" fill="none" className="text-primary">
+            <path d="M14 2L25.5 10.5L21 24H7L2.5 10.5L14 2Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+            <path d="M14 7L17.5 13L14 19L10.5 13L14 7Z" fill="currentColor" opacity="0.25" />
+            <path d="M14 7L17.5 13L14 19L10.5 13L14 7Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+          </svg>
+        </div>
+        <h2 className="text-lg font-semibold text-primary">Setting Up Your Collection</h2>
         <p className="text-sm text-muted-foreground max-w-sm">
           Loading your 4 Commander precon decks from Scryfall.
           This only happens once...
