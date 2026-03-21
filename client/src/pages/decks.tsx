@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useQueries, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -19,8 +19,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Layers3, Trash2 } from "lucide-react";
-import type { Deck } from "@shared/schema";
+import { Plus, Layers3, Trash2, Crown, GitCompare } from "lucide-react";
+import type { Deck, DeckCard } from "@shared/schema";
 
 const formats = [
   "commander",
@@ -41,6 +41,24 @@ export default function DecksPage() {
 
   const { data: deckList = [], isLoading } = useQuery<Deck[]>({
     queryKey: ["/api/decks"],
+  });
+
+  // Fetch all deck cards to find commanders
+  const deckCardsResults = useQueries({
+    queries: deckList.map((deck) => ({
+      queryKey: ["/api/decks", deck.id, "cards"],
+      queryFn: async () => {
+        const res = await apiRequest("GET", `/api/decks/${deck.id}/cards`);
+        return res.json() as Promise<DeckCard[]>;
+      },
+      enabled: !!deck.id,
+    })),
+  });
+
+  const deckCardsMap = new Map<number, DeckCard[]>();
+  deckList.forEach((deck, i) => {
+    const data = deckCardsResults[i]?.data;
+    if (data) deckCardsMap.set(deck.id, data as unknown as DeckCard[]);
   });
 
   const createDeck = useMutation({
@@ -78,53 +96,63 @@ export default function DecksPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">Decks</h1>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="new-deck-btn">
-              <Plus className="w-4 h-4 mr-2" />
-              New Deck
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New Deck</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-2">
-              <div>
-                <label className="text-sm font-medium mb-1.5 block">Deck Name</label>
-                <Input
-                  placeholder="e.g. Draconic Destruction Upgraded"
-                  value={newDeckName}
-                  onChange={(e) => setNewDeckName(e.target.value)}
-                  data-testid="deck-name-input"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-1.5 block">Format</label>
-                <Select value={newDeckFormat} onValueChange={setNewDeckFormat}>
-                  <SelectTrigger data-testid="deck-format-select">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {formats.map((f) => (
-                      <SelectItem key={f} value={f}>
-                        {f.charAt(0).toUpperCase() + f.slice(1)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button
-                className="w-full"
-                disabled={!newDeckName.trim() || createDeck.isPending}
-                onClick={() => createDeck.mutate()}
-                data-testid="create-deck-submit"
-              >
-                {createDeck.isPending ? "Creating..." : "Create Deck"}
+        <div className="flex items-center gap-2">
+          {deckList.length >= 2 && (
+            <Link href="/compare">
+              <Button variant="secondary" size="sm" className="gap-1.5">
+                <GitCompare className="w-3.5 h-3.5" />
+                Compare
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </Link>
+          )}
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button data-testid="new-deck-btn">
+                <Plus className="w-4 h-4 mr-2" />
+                New Deck
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create New Deck</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 pt-2">
+                <div>
+                  <label className="text-sm font-medium mb-1.5 block">Deck Name</label>
+                  <Input
+                    placeholder="e.g. Draconic Destruction Upgraded"
+                    value={newDeckName}
+                    onChange={(e) => setNewDeckName(e.target.value)}
+                    data-testid="deck-name-input"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1.5 block">Format</label>
+                  <Select value={newDeckFormat} onValueChange={setNewDeckFormat}>
+                    <SelectTrigger data-testid="deck-format-select">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {formats.map((f) => (
+                        <SelectItem key={f} value={f}>
+                          {f.charAt(0).toUpperCase() + f.slice(1)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  className="w-full"
+                  disabled={!newDeckName.trim() || createDeck.isPending}
+                  onClick={() => createDeck.mutate()}
+                  data-testid="create-deck-submit"
+                >
+                  {createDeck.isPending ? "Creating..." : "Create Deck"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Loading */}
@@ -139,42 +167,52 @@ export default function DecksPage() {
       {/* Deck grid */}
       {!isLoading && deckList.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {deckList.map((deck) => (
-            <div
-              key={deck.id}
-              className="bg-card border border-card-border rounded-xl p-4 hover:border-primary/30 transition-colors group relative"
-              data-testid={`deck-card-${deck.id}`}
-            >
-              <Link href={`/decks/${deck.id}`}>
-                <div className="cursor-pointer">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Layers3 className="w-5 h-5 text-primary" />
-                      <h3 className="font-semibold text-sm">{deck.name}</h3>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs bg-muted px-2 py-0.5 rounded capitalize">
-                      {deck.format}
-                    </span>
-                  </div>
-                </div>
-              </Link>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute top-3 right-3 w-7 h-7 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  deleteDeck.mutate(deck.id);
-                }}
-                data-testid={`delete-deck-${deck.id}`}
+          {deckList.map((deck) => {
+            const cards = deckCardsMap.get(deck.id) || [];
+            const commander = cards.find((c) => c.isCommander);
+            return (
+              <div
+                key={deck.id}
+                className="bg-card border border-card-border rounded-xl p-4 hover:border-primary/30 transition-colors group relative"
+                data-testid={`deck-card-${deck.id}`}
               >
-                <Trash2 className="w-3.5 h-3.5" />
-              </Button>
-            </div>
-          ))}
+                <Link href={`/decks/${deck.id}`}>
+                  <div className="cursor-pointer">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Layers3 className="w-5 h-5 text-primary" />
+                        <h3 className="font-semibold text-sm">{deck.name}</h3>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs bg-muted px-2 py-0.5 rounded capitalize">
+                        {deck.format}
+                      </span>
+                    </div>
+                    {commander && (
+                      <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
+                        <Crown className="w-3 h-3 text-yellow-500" />
+                        {commander.name}
+                      </div>
+                    )}
+                  </div>
+                </Link>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-3 right-3 w-7 h-7 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    deleteDeck.mutate(deck.id);
+                  }}
+                  data-testid={`delete-deck-${deck.id}`}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            );
+          })}
         </div>
       )}
 

@@ -72,9 +72,46 @@ export async function apiRequest(
     const id = parseInt(url.split("/")[3]);
     return jsonResponse(await db.updateDeckCardQuantity(id, body.quantity));
   }
+  if (url.match(/^\/api\/deck-cards\/(\d+)$/) && method === "PATCH") {
+    const id = parseInt(url.split("/")[3]);
+    return jsonResponse(await db.updateDeckCard(id, body));
+  }
   if (url.match(/^\/api\/deck-cards\/(\d+)$/) && method === "DELETE") {
     const id = parseInt(url.split("/").pop()!);
     await db.removeDeckCard(id);
+    return jsonResponse({ ok: true });
+  }
+
+  // ===== GAME HISTORY =====
+  if (url.match(/^\/api\/decks\/(\d+)\/history$/) && method === "GET") {
+    const deckId = parseInt(url.split("/")[3]);
+    return jsonResponse(await db.getGameHistory(deckId));
+  }
+  if (url.match(/^\/api\/decks\/(\d+)\/history$/) && method === "POST") {
+    const deckId = parseInt(url.split("/")[3]);
+    return jsonResponse(await db.addGameHistoryEntry({ ...body, deckId }));
+  }
+  if (url.match(/^\/api\/game-history\/(\d+)$/) && method === "DELETE") {
+    const id = parseInt(url.split("/").pop()!);
+    await db.removeGameHistoryEntry(id);
+    return jsonResponse({ ok: true });
+  }
+
+  // ===== WISHLIST =====
+  if (url === "/api/wishlist" && method === "GET") {
+    return jsonResponse(await db.getWishlistCards());
+  }
+  if (url === "/api/wishlist" && method === "POST") {
+    return jsonResponse(await db.addWishlistCard(body));
+  }
+  if (url.match(/^\/api\/wishlist\/(\d+)$/) && method === "DELETE") {
+    const id = parseInt(url.split("/").pop()!);
+    await db.removeWishlistCard(id);
+    return jsonResponse({ ok: true });
+  }
+  if (url.match(/^\/api\/wishlist\/scryfall\/(.+)$/) && method === "DELETE") {
+    const scryfallId = url.split("/").pop()!;
+    await db.removeWishlistByScryfallId(scryfallId);
     return jsonResponse({ ok: true });
   }
 

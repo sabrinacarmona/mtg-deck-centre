@@ -2,7 +2,7 @@ import { openDB, type IDBPDatabase } from "idb";
 import { SEED_DECKS, type SeedDeck } from "./seed-decks";
 
 const DB_NAME = "mtg-deck-centre";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const SEED_KEY = "mtg-deck-centre-seeded";
 
 interface CollectionCard {
@@ -52,6 +52,29 @@ interface DeckCard {
   toughness: string | null;
   quantity: number;
   board: string;
+  priceUsd?: string | null;
+  isCommander?: boolean;
+  legalities?: string | null;
+}
+
+interface GameHistoryEntry {
+  id?: number;
+  deckId: number;
+  date: string;
+  opponent: string;
+  result: "win" | "loss" | "draw";
+  notes: string;
+}
+
+interface WishlistCard {
+  id?: number;
+  scryfallId: string;
+  name: string;
+  imageSmall: string | null;
+  imageNormal: string | null;
+  priceUsd: string | null;
+  typeLine: string;
+  addedDate: string;
 }
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
@@ -59,7 +82,7 @@ let dbPromise: Promise<IDBPDatabase> | null = null;
 function getDB() {
   if (!dbPromise) {
     dbPromise = openDB(DB_NAME, DB_VERSION, {
-      upgrade(db) {
+      upgrade(db, oldVersion) {
         // Collection store
         if (!db.objectStoreNames.contains("collectionCards")) {
           const cs = db.createObjectStore("collectionCards", {
@@ -79,6 +102,25 @@ function getDB() {
             autoIncrement: true,
           });
           dc.createIndex("deckId", "deckId", { unique: false });
+        }
+        // V2 stores
+        if (oldVersion < 2) {
+          // Game history store
+          if (!db.objectStoreNames.contains("gameHistory")) {
+            const gh = db.createObjectStore("gameHistory", {
+              keyPath: "id",
+              autoIncrement: true,
+            });
+            gh.createIndex("deckId", "deckId", { unique: false });
+          }
+          // Wishlist store
+          if (!db.objectStoreNames.contains("wishlist")) {
+            const wl = db.createObjectStore("wishlist", {
+              keyPath: "id",
+              autoIncrement: true,
+            });
+            wl.createIndex("scryfallId", "scryfallId", { unique: false });
+          }
         }
       },
     });
@@ -227,6 +269,18 @@ export async function updateDeckCardQuantity(
   return card;
 }
 
+export async function updateDeckCard(
+  id: number,
+  data: Partial<Omit<DeckCard, "id">>
+): Promise<DeckCard | null> {
+  const db = await getDB();
+  const card = await db.get("deckCards", id);
+  if (!card) return null;
+  Object.assign(card, data);
+  await db.put("deckCards", card);
+  return card;
+}
+
 export async function removeDeckCard(id: number): Promise<void> {
   const db = await getDB();
   await db.delete("deckCards", id);
@@ -247,6 +301,57 @@ export async function bulkImportDeck(
     }
   }
   return { added, failed };
+}
+
+// ===== GAME HISTORY =====
+
+export async function getGameHistory(deckId: number): Promise<GameHistoryEntry[]> {
+  const db = await getDB();
+  return db.getAllFromIndex("gameHistory", "deckId", deckId);
+}
+
+export async function addGameHistoryEntry(
+  entry: Omit<GameHistoryEntry, "id">
+): Promise<GameHistoryEntry> {
+  const db = await getDB();
+  const id = await db.add("gameHistory", { ...entry });
+  return { ...entry, id: id as number };
+}
+
+export async function removeGameHistoryEntry(id: number): Promise<void> {
+  const db = await getDB();
+  await db.delete("gameHistory", id);
+}
+
+// ===== WISHLIST =====
+
+export async function getWishlistCards(): Promise<WishlistCard[]> {
+  const db = await getDB();
+  return db.getAll("wishlist");
+}
+
+export async function addWishlistCard(
+  card: Omit<WishlistCard, "id">
+): Promise<WishlistCard> {
+  const db = await getDB();
+  // Check if already exists
+  const all = await db.getAllFromIndex("wishlist", "scryfallId", card.scryfallId);
+  if (all.length > 0) return all[0];
+  const id = await db.add("wishlist", { ...card });
+  return { ...card, id: id as number };
+}
+
+export async function removeWishlistCard(id: number): Promise<void> {
+  const db = await getDB();
+  await db.delete("wishlist", id);
+}
+
+export async function removeWishlistByScryfallId(scryfallId: string): Promise<void> {
+  const db = await getDB();
+  const all = await db.getAllFromIndex("wishlist", "scryfallId", scryfallId);
+  for (const card of all) {
+    await db.delete("wishlist", card.id);
+  }
 }
 
 // ===== SCRYFALL (direct client calls) =====
@@ -325,6 +430,8 @@ function scryfallToPayload(card: any, qty: number, forDeck: boolean) {
   };
   if (forDeck) {
     base.board = "main";
+    base.priceUsd = card.prices?.usd || null;
+    base.legalities = card.legalities ? JSON.stringify(card.legalities) : null;
   } else {
     base.priceUsd = card.prices?.usd || null;
     base.setName = card.set_name || null;

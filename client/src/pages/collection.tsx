@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Minus, Plus, Trash2, DollarSign, BookOpen, Import } from "lucide-react";
+import { Search, Minus, Plus, Trash2, DollarSign, BookOpen, Import, X } from "lucide-react";
 import ImportDialog from "@/components/ImportDialog";
 import type { CollectionCard } from "@shared/schema";
 
@@ -22,6 +22,7 @@ export default function CollectionPage() {
   const [search, setSearch] = useState("");
   const [colorFilter, setColorFilter] = useState("all");
   const [importOpen, setImportOpen] = useState(false);
+  const [zoomedCard, setZoomedCard] = useState<CollectionCard | null>(null);
   const { toast } = useToast();
 
   const { data: cards = [], isLoading } = useQuery<CollectionCard[]>({
@@ -159,8 +160,9 @@ export default function CollectionPage() {
           {filtered.map((card) => (
             <div
               key={card.id}
-              className="flex items-center gap-3 bg-card border border-card-border rounded-xl p-2.5 hover:border-primary/30 transition-colors"
+              className="flex items-center gap-3 bg-card border border-card-border rounded-xl p-2.5 hover:border-primary/30 transition-colors cursor-pointer"
               data-testid={`collection-card-${card.id}`}
+              onClick={() => setZoomedCard(card)}
             >
               {/* Thumbnail */}
               {card.imageSmall ? (
@@ -194,7 +196,7 @@ export default function CollectionPage() {
               </div>
 
               {/* Quantity controls */}
-              <div className="flex items-center gap-1.5 flex-shrink-0">
+              <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                 <Button
                   variant="secondary"
                   size="icon"
@@ -267,6 +269,127 @@ export default function CollectionPage() {
         open={importOpen}
         onOpenChange={setImportOpen}
       />
+
+      {/* Collection card zoom overlay */}
+      {zoomedCard && (
+        <CollectionCardZoom
+          card={zoomedCard}
+          onClose={() => setZoomedCard(null)}
+          onUpdateQuantity={(id, qty) => {
+            updateQuantity.mutate({ id, quantity: qty });
+            if (qty <= 0) setZoomedCard(null);
+          }}
+          onRemove={(id) => {
+            removeCard.mutate(id);
+            setZoomedCard(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function CollectionCardZoom({
+  card,
+  onClose,
+  onUpdateQuantity,
+  onRemove,
+}: {
+  card: CollectionCard;
+  onClose: () => void;
+  onUpdateQuantity: (id: number, qty: number) => void;
+  onRemove: (id: number) => void;
+}) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  const image = card.imageNormal || card.imageSmall;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="relative flex flex-col sm:flex-row items-center gap-6 max-w-3xl w-full px-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          className="absolute -top-2 -right-2 sm:top-0 sm:right-0 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors z-10"
+          onClick={onClose}
+        >
+          <X className="w-4 h-4" />
+        </button>
+
+        {image ? (
+          <img
+            src={image}
+            alt={card.name}
+            className="rounded-2xl shadow-2xl max-h-[75vh] w-auto"
+          />
+        ) : (
+          <div className="bg-muted rounded-2xl w-[300px] aspect-[5/7] flex items-center justify-center">
+            <span className="text-muted-foreground">{card.name}</span>
+          </div>
+        )}
+
+        <div className="flex flex-col items-center sm:items-start gap-4 text-white">
+          <div>
+            <h2 className="text-xl font-bold">{card.name}</h2>
+            <p className="text-sm text-white/60">{card.typeLine}</p>
+            {card.manaCost && (
+              <p className="text-sm text-white/50 mt-1">{card.manaCost}</p>
+            )}
+          </div>
+
+          {card.oracleText && (
+            <p className="text-sm text-white/80 whitespace-pre-wrap leading-relaxed max-w-xs">
+              {card.oracleText}
+            </p>
+          )}
+
+          {card.power && card.toughness && (
+            <p className="text-sm font-semibold text-white/70">
+              {card.power}/{card.toughness}
+            </p>
+          )}
+
+          {card.priceUsd && (
+            <p className="text-lg font-bold text-emerald-400">
+              ${card.priceUsd}
+            </p>
+          )}
+
+          <div className="flex items-center gap-2 mt-2">
+            <button
+              className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+              onClick={() => onUpdateQuantity(card.id, (card.quantity || 1) - 1)}
+            >
+              <Minus className="w-4 h-4" />
+            </button>
+            <span className="text-lg font-bold w-8 text-center">
+              {card.quantity || 1}x
+            </span>
+            <button
+              className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+              onClick={() => onUpdateQuantity(card.id, (card.quantity || 1) + 1)}
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+            <button
+              className="w-8 h-8 rounded-lg bg-red-500/30 hover:bg-red-500/50 flex items-center justify-center text-white transition-colors ml-2"
+              onClick={() => onRemove(card.id)}
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

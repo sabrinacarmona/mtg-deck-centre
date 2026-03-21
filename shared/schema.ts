@@ -60,6 +60,9 @@ export const deckCards = sqliteTable("deck_cards", {
   toughness: text("toughness"),
   quantity: integer("quantity").default(1),
   board: text("board").default("main"), // "main" or "side"
+  priceUsd: text("price_usd"),
+  isCommander: integer("is_commander", { mode: "boolean" }),
+  legalities: text("legalities"), // JSON
 });
 
 export const insertDeckCardSchema = createInsertSchema(deckCards).omit({ id: true });
@@ -104,4 +107,5 @@ export interface ScryfallCard {
     usd_foil?: string;
     eur?: string;
   };
+  legalities?: Record<string, string>;
 }

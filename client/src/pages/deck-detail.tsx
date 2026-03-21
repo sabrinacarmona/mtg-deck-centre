@@ -5,7 +5,6 @@ import { useRoute, Link } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import ManaCurve from "@/components/ManaCurve";
 import ColorDistribution from "@/components/ColorDistribution";
@@ -21,9 +20,24 @@ import {
   ChevronUp,
   BarChart3,
   X,
+  Download,
+  Copy,
+  Crown,
+  AlertTriangle,
+  Trophy,
+  PlusCircle,
 } from "lucide-react";
 import ImportDialog from "@/components/ImportDialog";
 import type { Deck, DeckCard, ScryfallCard } from "@shared/schema";
+
+interface GameHistoryEntry {
+  id: number;
+  deckId: number;
+  date: string;
+  opponent: string;
+  result: "win" | "loss" | "draw";
+  notes: string;
+}
 
 export default function DeckDetailPage() {
   const [, params] = useRoute("/decks/:id");
@@ -34,6 +48,8 @@ export default function DeckDetailPage() {
   const [importOpen, setImportOpen] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
   const [zoomedCard, setZoomedCard] = useState<DeckCard | null>(null);
+  const [gameLogOpen, setGameLogOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -74,6 +90,15 @@ export default function DeckDetailPage() {
     enabled: debouncedQuery.length >= 2,
   });
 
+  const { data: gameHistory = [] } = useQuery<GameHistoryEntry[]>({
+    queryKey: ["/api/decks", deckId, "history"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/decks/${deckId}/history`);
+      return res.json();
+    },
+    enabled: !!deckId,
+  });
+
   const searchCards = searchData?.data || [];
 
   const addCard = useMutation({
@@ -98,6 +123,8 @@ export default function DeckDetailPage() {
         oracleText: card.oracle_text || null,
         power: card.power || null,
         toughness: card.toughness || null,
+        priceUsd: card.prices?.usd || null,
+        legalities: card.legalities ? JSON.stringify(card.legalities) : null,
         quantity: 1,
         board,
       });
@@ -145,6 +172,42 @@ export default function DeckDetailPage() {
     },
   });
 
+  const toggleCommander = useMutation({
+    mutationFn: async ({ id, isCommander }: { id: number; isCommander: boolean }) => {
+      const res = await apiRequest("PATCH", `/api/deck-cards/${id}`, { isCommander });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["/api/decks", deckId, "cards"],
+      });
+    },
+  });
+
+  const addHistoryEntry = useMutation({
+    mutationFn: async (entry: Omit<GameHistoryEntry, "id" | "deckId">) => {
+      const res = await apiRequest("POST", `/api/decks/${deckId}/history`, entry);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["/api/decks", deckId, "history"],
+      });
+      toast({ title: "Game logged" });
+    },
+  });
+
+  const deleteHistoryEntry = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/game-history/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["/api/decks", deckId, "history"],
+      });
+    },
+  });
+
   const mainCards = deckCards.filter((c) => c.board === "main");
   const sideCards = deckCards.filter((c) => c.board === "side");
   const activeCards = board === "main" ? mainCards : sideCards;
@@ -157,6 +220,68 @@ export default function DeckDetailPage() {
           totalMain
         ).toFixed(1)
       : "0.0";
+
+  // Feature 3: Deck Price
+  const totalPrice = deckCards.reduce((sum, c) => {
+    const price = parseFloat(c.priceUsd || "0");
+    return sum + price * (c.quantity || 1);
+  }, 0);
+
+  // Feature 2: Export
+  const handleExport = () => {
+    const typeOrder = ["Creatures", "Planeswalkers", "Instants", "Sorceries", "Enchantments", "Artifacts", "Lands", "Other"];
+    const grouped: Record<string, DeckCard[]> = {};
+    for (const card of mainCards) {
+      const rawType = card.typeLine.split("—")[0].trim();
+      let type = "Other";
+      if (rawType.includes("Creature")) type = "Creatures";
+      else if (rawType.includes("Instant")) type = "Instants";
+      else if (rawType.includes("Sorcery")) type = "Sorceries";
+      else if (rawType.includes("Enchantment")) type = "Enchantments";
+      else if (rawType.includes("Artifact")) type = "Artifacts";
+      else if (rawType.includes("Planeswalker")) type = "Planeswalkers";
+      else if (rawType.includes("Land")) type = "Lands";
+      if (!grouped[type]) grouped[type] = [];
+      grouped[type].push(card);
+    }
+
+    let text = "";
+    for (const type of typeOrder) {
+      if (!grouped[type]?.length) continue;
+      text += `// ${type}\n`;
+      for (const c of grouped[type]) {
+        text += `${c.quantity || 1} ${c.name}\n`;
+      }
+      text += "\n";
+    }
+
+    if (sideCards.length > 0) {
+      text += "Sideboard\n";
+      for (const c of sideCards) {
+        text += `${c.quantity || 1} ${c.name}\n`;
+      }
+    }
+
+    return text.trim();
+  };
+
+  const copyToClipboard = () => {
+    const text = handleExport();
+    navigator.clipboard.writeText(text);
+    toast({ title: "Decklist copied to clipboard" });
+  };
+
+  const downloadTxt = () => {
+    const text = handleExport();
+    const blob = new Blob([text], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${deck?.name || "deck"}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: "Decklist downloaded" });
+  };
 
   if (!deck) {
     return (
@@ -177,16 +302,21 @@ export default function DeckDetailPage() {
         </Link>
         <div className="flex-1">
           <h1 className="text-lg font-bold">{deck.name}</h1>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
             <Badge variant="outline" className="text-[10px] capitalize">
               {deck.format}
             </Badge>
             <span>{totalMain} main</span>
             <span>{totalSide} side</span>
             <span>Avg CMC: {avgCmc}</span>
+            {totalPrice > 0 && (
+              <span className="text-emerald-500 font-medium">
+                Est. ${totalPrice.toFixed(2)}
+              </span>
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button
             variant="secondary"
             size="sm"
@@ -195,8 +325,26 @@ export default function DeckDetailPage() {
             data-testid="toggle-stats-btn"
           >
             <BarChart3 className="w-3.5 h-3.5" />
-            Stats
+            <span className="hidden sm:inline">Stats</span>
             {statsOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="gap-1.5"
+            onClick={copyToClipboard}
+          >
+            <Copy className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Copy</span>
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="gap-1.5"
+            onClick={downloadTxt}
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Export</span>
           </Button>
           <Button
             variant="secondary"
@@ -206,7 +354,7 @@ export default function DeckDetailPage() {
             data-testid="import-deck-btn"
           >
             <Import className="w-3.5 h-3.5" />
-            Import
+            <span className="hidden sm:inline">Import</span>
           </Button>
         </div>
       </div>
@@ -268,12 +416,13 @@ export default function DeckDetailPage() {
               onUpdateQuantity={(id, qty) => updateQuantity.mutate({ id, quantity: qty })}
               onRemove={(id) => removeCard.mutate(id)}
               onCardClick={(card) => setZoomedCard(card)}
+              deckFormat={deck.format}
             />
           )}
         </div>
 
         {/* RIGHT: Search + add panel */}
-        <div className="lg:col-span-2 space-y-3">
+        <div className={`lg:col-span-2 space-y-3 ${mobileSearchOpen ? "" : "hidden lg:block"}`} id="deck-search-panel">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -300,7 +449,87 @@ export default function DeckDetailPage() {
               Search for cards to add to your deck
             </div>
           )}
+
+          {/* Close button for mobile */}
+          <Button
+            variant="secondary"
+            className="w-full lg:hidden"
+            onClick={() => setMobileSearchOpen(false)}
+          >
+            Close Search
+          </Button>
         </div>
+      </div>
+
+      {/* Mobile floating add button */}
+      {!mobileSearchOpen && (
+        <button
+          className="fixed bottom-6 right-6 lg:hidden w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center z-40"
+          onClick={() => setMobileSearchOpen(true)}
+        >
+          <PlusCircle className="w-6 h-6" />
+        </button>
+      )}
+
+      {/* Game Log Section */}
+      <div className="border border-card-border rounded-xl overflow-hidden">
+        <button
+          className="w-full flex items-center justify-between p-3 bg-card hover:bg-muted/50 transition-colors"
+          onClick={() => setGameLogOpen(!gameLogOpen)}
+        >
+          <div className="flex items-center gap-2">
+            <Trophy className="w-4 h-4 text-primary" />
+            <span className="text-sm font-semibold">Game Log</span>
+            {gameHistory.length > 0 && (
+              <Badge variant="outline" className="text-[10px]">
+                {gameHistory.filter((g) => g.result === "win").length}W -{" "}
+                {gameHistory.filter((g) => g.result === "loss").length}L -{" "}
+                {gameHistory.filter((g) => g.result === "draw").length}D
+              </Badge>
+            )}
+          </div>
+          {gameLogOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </button>
+        {gameLogOpen && (
+          <div className="p-3 space-y-3 border-t border-card-border">
+            <GameLogForm onSubmit={(entry) => addHistoryEntry.mutate(entry)} />
+            {gameHistory.length > 0 && (
+              <div className="space-y-1.5">
+                {gameHistory
+                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                  .map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="flex items-center gap-2 text-xs bg-muted/50 rounded-lg p-2"
+                  >
+                    <span
+                      className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                        entry.result === "win"
+                          ? "bg-emerald-500/20 text-emerald-400"
+                          : entry.result === "loss"
+                          ? "bg-red-500/20 text-red-400"
+                          : "bg-yellow-500/20 text-yellow-400"
+                      }`}
+                    >
+                      {entry.result === "win" ? "W" : entry.result === "loss" ? "L" : "D"}
+                    </span>
+                    <span className="text-muted-foreground">{entry.date}</span>
+                    <span className="font-medium">vs {entry.opponent}</span>
+                    {entry.notes && (
+                      <span className="text-muted-foreground truncate flex-1">{entry.notes}</span>
+                    )}
+                    <button
+                      className="text-muted-foreground hover:text-destructive ml-auto"
+                      onClick={() => deleteHistoryEntry.mutate(entry.id)}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <ImportDialog
@@ -314,6 +543,7 @@ export default function DeckDetailPage() {
       {zoomedCard && (
         <CardZoomOverlay
           card={zoomedCard}
+          deckFormat={deck.format}
           onClose={() => setZoomedCard(null)}
           onUpdateQuantity={(id, qty) => {
             updateQuantity.mutate({ id, quantity: qty });
@@ -322,8 +552,68 @@ export default function DeckDetailPage() {
             removeCard.mutate(id);
             setZoomedCard(null);
           }}
+          onToggleCommander={(id, isCommander) => {
+            toggleCommander.mutate({ id, isCommander });
+          }}
         />
       )}
+    </div>
+  );
+}
+
+function GameLogForm({ onSubmit }: { onSubmit: (entry: { date: string; opponent: string; result: "win" | "loss" | "draw"; notes: string }) => void }) {
+  const [opponent, setOpponent] = useState("");
+  const [result, setResult] = useState<"win" | "loss" | "draw">("win");
+  const [notes, setNotes] = useState("");
+
+  const handleSubmit = () => {
+    if (!opponent.trim()) return;
+    onSubmit({
+      date: new Date().toISOString().split("T")[0],
+      opponent: opponent.trim(),
+      result,
+      notes: notes.trim(),
+    });
+    setOpponent("");
+    setNotes("");
+  };
+
+  return (
+    <div className="flex flex-col sm:flex-row gap-2">
+      <Input
+        placeholder="Opponent"
+        value={opponent}
+        onChange={(e) => setOpponent(e.target.value)}
+        className="h-8 text-xs bg-card"
+      />
+      <div className="flex gap-1">
+        {(["win", "loss", "draw"] as const).map((r) => (
+          <button
+            key={r}
+            onClick={() => setResult(r)}
+            className={`px-2 py-1 rounded text-xs font-medium ${
+              result === r
+                ? r === "win"
+                  ? "bg-emerald-500/20 text-emerald-400"
+                  : r === "loss"
+                  ? "bg-red-500/20 text-red-400"
+                  : "bg-yellow-500/20 text-yellow-400"
+                : "bg-muted text-muted-foreground"
+            }`}
+          >
+            {r.charAt(0).toUpperCase() + r.slice(1)}
+          </button>
+        ))}
+      </div>
+      <Input
+        placeholder="Notes (optional)"
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        className="h-8 text-xs bg-card flex-1"
+      />
+      <Button size="sm" className="h-8 text-xs" onClick={handleSubmit} disabled={!opponent.trim()}>
+        Log
+      </Button>
     </div>
   );
 }
@@ -334,11 +624,13 @@ function DeckVisualGrid({
   onUpdateQuantity,
   onRemove,
   onCardClick,
+  deckFormat,
 }: {
   cards: DeckCard[];
   onUpdateQuantity: (id: number, qty: number) => void;
   onRemove: (id: number) => void;
   onCardClick: (card: DeckCard) => void;
+  deckFormat: string;
 }) {
   // Group by type category
   const grouped: Record<string, DeckCard[]> = {};
@@ -378,7 +670,7 @@ function DeckVisualGrid({
           <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">
             {type} ({typeCards.reduce((s, c) => s + (c.quantity || 1), 0)})
           </div>
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-2">
             {typeCards.map((card) => (
               <DeckCardTile
                 key={card.id}
@@ -386,6 +678,7 @@ function DeckVisualGrid({
                 onUpdateQuantity={onUpdateQuantity}
                 onRemove={onRemove}
                 onCardClick={onCardClick}
+                deckFormat={deckFormat}
               />
             ))}
           </div>
@@ -401,12 +694,16 @@ function DeckCardTile({
   onUpdateQuantity,
   onRemove,
   onCardClick,
+  deckFormat,
 }: {
   card: DeckCard;
   onUpdateQuantity: (id: number, qty: number) => void;
   onRemove: (id: number) => void;
   onCardClick: (card: DeckCard) => void;
+  deckFormat: string;
 }) {
+  const isIllegal = checkIllegal(card, deckFormat);
+
   return (
     <div
       className="relative group cursor-pointer"
@@ -436,6 +733,20 @@ function DeckCardTile({
         </div>
       )}
 
+      {/* Commander crown badge */}
+      {card.isCommander && (
+        <div className="absolute top-1 right-1 bg-yellow-500 text-black text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-lg">
+          <Crown className="w-3 h-3" />
+        </div>
+      )}
+
+      {/* Illegality badge */}
+      {isIllegal && (
+        <div className="absolute bottom-1 right-1 bg-red-500/90 text-white text-[8px] font-bold px-1.5 py-0.5 rounded">
+          !
+        </div>
+      )}
+
       {/* Hover overlay — name only, click to zoom */}
       <div className="absolute inset-0 bg-black/50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-end">
         <div className="w-full bg-gradient-to-t from-black/80 to-transparent rounded-b-lg px-2 py-1.5">
@@ -448,17 +759,32 @@ function DeckCardTile({
   );
 }
 
+function checkIllegal(card: DeckCard, deckFormat: string): boolean {
+  if (!card.legalities) return false;
+  try {
+    const legalities = JSON.parse(card.legalities);
+    const status = legalities[deckFormat];
+    return status && status !== "legal" && status !== "restricted";
+  } catch {
+    return false;
+  }
+}
+
 /** Full-screen card zoom overlay with large image and controls */
 function CardZoomOverlay({
   card,
+  deckFormat,
   onClose,
   onUpdateQuantity,
   onRemove,
+  onToggleCommander,
 }: {
   card: DeckCard;
+  deckFormat: string;
   onClose: () => void;
   onUpdateQuantity: (id: number, qty: number) => void;
   onRemove: (id: number) => void;
+  onToggleCommander: (id: number, isCommander: boolean) => void;
 }) {
   // Close on Escape
   useEffect(() => {
@@ -470,15 +796,25 @@ function CardZoomOverlay({
   }, [onClose]);
 
   const image = card.imageNormal || card.imageSmall;
+  const isIllegal = checkIllegal(card, deckFormat);
+
+  let legalityLabel = "";
+  if (isIllegal && card.legalities) {
+    try {
+      const legalities = JSON.parse(card.legalities);
+      const status = legalities[deckFormat];
+      legalityLabel = `${status === "banned" ? "Banned" : "Not legal"} in ${deckFormat}`;
+    } catch { /* ignore */ }
+  }
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
       onClick={onClose}
       data-testid="card-zoom-overlay"
     >
       <div
-        className="relative flex flex-col sm:flex-row items-center gap-6 max-w-3xl w-full px-4"
+        className="relative flex flex-col lg:flex-row items-center gap-6 max-w-3xl w-full"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close button */}
@@ -495,7 +831,7 @@ function CardZoomOverlay({
           <img
             src={image}
             alt={card.name}
-            className="rounded-2xl shadow-2xl max-h-[75vh] w-auto"
+            className="rounded-2xl shadow-2xl max-h-[60vh] lg:max-h-[75vh] w-auto max-w-full"
             data-testid="card-zoom-image"
           />
         ) : (
@@ -505,7 +841,7 @@ function CardZoomOverlay({
         )}
 
         {/* Card info + controls */}
-        <div className="flex flex-col items-center sm:items-start gap-4 text-white">
+        <div className="flex flex-col items-center lg:items-start gap-3 text-white w-full lg:w-auto">
           <div>
             <h2 className="text-xl font-bold">{card.name}</h2>
             <p className="text-sm text-white/60">{card.typeLine}</p>
@@ -525,6 +861,31 @@ function CardZoomOverlay({
               {card.power}/{card.toughness}
             </p>
           )}
+
+          {card.priceUsd && (
+            <p className="text-sm text-emerald-400 font-medium">${card.priceUsd}</p>
+          )}
+
+          {/* Legality warning */}
+          {isIllegal && legalityLabel && (
+            <div className="flex items-center gap-1.5 text-xs text-red-400 bg-red-500/20 rounded-lg px-2 py-1">
+              <AlertTriangle className="w-3 h-3" />
+              {legalityLabel}
+            </div>
+          )}
+
+          {/* Commander toggle */}
+          <button
+            className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg transition-colors ${
+              card.isCommander
+                ? "bg-yellow-500/30 text-yellow-300"
+                : "bg-white/10 text-white/60 hover:text-white"
+            }`}
+            onClick={() => onToggleCommander(card.id, !card.isCommander)}
+          >
+            <Crown className="w-3.5 h-3.5" />
+            {card.isCommander ? "Commander" : "Set as Commander"}
+          </button>
 
           {/* Quantity controls */}
           <div className="flex items-center gap-2 mt-2">
