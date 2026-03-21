@@ -5,9 +5,16 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Minus, Plus, Trash2, DollarSign, BookOpen, Import, X } from "lucide-react";
+import { Search, Minus, Plus, Trash2, DollarSign, BookOpen, Import, X, ArrowUpDown } from "lucide-react";
 import ImportDialog from "@/components/ImportDialog";
 import { ManaCost, OracleText } from "@/components/ManaSymbols";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { CollectionCard } from "@shared/schema";
 
 const colorFilters = [
@@ -22,6 +29,7 @@ const colorFilters = [
 export default function CollectionPage() {
   const [search, setSearch] = useState("");
   const [colorFilter, setColorFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("name-asc");
   const [importOpen, setImportOpen] = useState(false);
   const [zoomedCard, setZoomedCard] = useState<CollectionCard | null>(null);
   const { toast } = useToast();
@@ -71,6 +79,31 @@ export default function CollectionPage() {
     return matchesSearch && matchesColor;
   });
 
+  // Sort cards
+  const rarityOrder: Record<string, number> = { mythic: 0, rare: 1, uncommon: 2, common: 3 };
+  const sorted = [...filtered].sort((a, b) => {
+    switch (sortBy) {
+      case "name-asc":
+        return a.name.localeCompare(b.name);
+      case "name-desc":
+        return b.name.localeCompare(a.name);
+      case "price-desc":
+        return (parseFloat(b.priceUsd || "0")) - (parseFloat(a.priceUsd || "0"));
+      case "price-asc":
+        return (parseFloat(a.priceUsd || "0")) - (parseFloat(b.priceUsd || "0"));
+      case "rarity":
+        return (rarityOrder[a.rarity || "common"] ?? 3) - (rarityOrder[b.rarity || "common"] ?? 3);
+      case "cmc-asc":
+        return (a.cmc || 0) - (b.cmc || 0);
+      case "cmc-desc":
+        return (b.cmc || 0) - (a.cmc || 0);
+      case "recent":
+        return b.id - a.id;
+      default:
+        return 0;
+    }
+  });
+
   // Stats
   const totalCards = cards.reduce((sum, c) => sum + (c.quantity || 1), 0);
   const uniqueCards = cards.length;
@@ -99,7 +132,7 @@ export default function CollectionPage() {
         </div>
       </div>
 
-      {/* Search + filters + import */}
+      {/* Search + sort + filters + import */}
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -112,6 +145,22 @@ export default function CollectionPage() {
             data-testid="collection-search"
           />
         </div>
+        <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="w-[170px] h-10 shrink-0">
+            <ArrowUpDown className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="name-asc">Name (A-Z)</SelectItem>
+            <SelectItem value="name-desc">Name (Z-A)</SelectItem>
+            <SelectItem value="price-desc">Price (High→Low)</SelectItem>
+            <SelectItem value="price-asc">Price (Low→High)</SelectItem>
+            <SelectItem value="rarity">Rarity</SelectItem>
+            <SelectItem value="cmc-asc">CMC (Low→High)</SelectItem>
+            <SelectItem value="cmc-desc">CMC (High→Low)</SelectItem>
+            <SelectItem value="recent">Recently Added</SelectItem>
+          </SelectContent>
+        </Select>
         <Button
           variant="secondary"
           size="sm"
@@ -156,9 +205,9 @@ export default function CollectionPage() {
       )}
 
       {/* Card list */}
-      {!isLoading && filtered.length > 0 && (
+      {!isLoading && sorted.length > 0 && (
         <div className="space-y-1.5">
-          {filtered.map((card) => (
+          {sorted.map((card) => (
             <div
               key={card.id}
               className="flex items-center gap-3 bg-card border border-card-border rounded-xl p-2.5 hover:border-primary/30 transition-colors cursor-pointer"
@@ -264,7 +313,7 @@ export default function CollectionPage() {
         </div>
       )}
 
-      {!isLoading && cards.length > 0 && filtered.length === 0 && (
+      {!isLoading && cards.length > 0 && sorted.length === 0 && (
         <div className="text-center py-8">
           <Search className="w-8 h-8 mx-auto mb-3 text-muted-foreground/30" />
           <p className="text-sm text-muted-foreground">

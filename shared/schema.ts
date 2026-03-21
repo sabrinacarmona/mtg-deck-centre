@@ -156,4 +156,5 @@ export interface ScryfallCard {
     eur?: string;
   };
   legalities?: Record<string, string>;
+  prints_search_uri?: string;
 }

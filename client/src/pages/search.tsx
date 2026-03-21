@@ -20,6 +20,9 @@ import {
   Hand,
   BarChart3,
   ExternalLink,
+  Filter,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { Link } from "wouter";
 import { ManaCost, OracleText } from "@/components/ManaSymbols";
@@ -38,23 +41,104 @@ interface WishlistCard {
   name: string;
 }
 
+// --- Advanced filter types ---
+interface SearchFilters {
+  colors: string[];
+  cmcOp: "" | "=" | ">=" | "<=";
+  cmcValue: string;
+  type: string;
+  rarity: string;
+  setCode: string;
+}
+
+const defaultFilters: SearchFilters = {
+  colors: [],
+  cmcOp: "",
+  cmcValue: "",
+  type: "",
+  rarity: "",
+  setCode: "",
+};
+
+const manaColors = [
+  { code: "W", label: "White" },
+  { code: "U", label: "Blue" },
+  { code: "B", label: "Black" },
+  { code: "R", label: "Red" },
+  { code: "G", label: "Green" },
+  { code: "C", label: "Colorless" },
+];
+
+const cardTypes = [
+  "Creature", "Instant", "Sorcery", "Enchantment", "Artifact", "Land", "Planeswalker",
+];
+
+const rarities = [
+  { value: "common", label: "Common", color: "bg-zinc-600 text-zinc-100" },
+  { value: "uncommon", label: "Uncommon", color: "bg-zinc-400 text-zinc-900" },
+  { value: "rare", label: "Rare", color: "bg-yellow-500 text-yellow-950" },
+  { value: "mythic", label: "Mythic", color: "bg-orange-500 text-orange-950" },
+];
+
+function buildScryfallQuery(text: string, filters: SearchFilters): string {
+  const parts: string[] = [];
+  if (text.trim()) parts.push(text.trim());
+  if (filters.colors.length > 0) {
+    if (filters.colors.includes("C")) {
+      parts.push("c:colorless");
+    } else {
+      parts.push(`c:${filters.colors.join("").toLowerCase()}`);
+    }
+  }
+  if (filters.cmcOp && filters.cmcValue !== "") {
+    parts.push(`cmc${filters.cmcOp}${filters.cmcValue}`);
+  }
+  if (filters.type) {
+    parts.push(`t:${filters.type.toLowerCase()}`);
+  }
+  if (filters.rarity) {
+    parts.push(`r:${filters.rarity}`);
+  }
+  if (filters.setCode.trim()) {
+    parts.push(`s:${filters.setCode.trim().toLowerCase()}`);
+  }
+  return parts.join(" ");
+}
+
+function countActiveFilters(filters: SearchFilters): number {
+  let count = 0;
+  if (filters.colors.length > 0) count++;
+  if (filters.cmcOp && filters.cmcValue !== "") count++;
+  if (filters.type) count++;
+  if (filters.rarity) count++;
+  if (filters.setCode.trim()) count++;
+  return count;
+}
+
 export default function SearchPage() {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [selectedCard, setSelectedCard] = useState<ScryfallCard | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filters, setFilters] = useState<SearchFilters>(defaultFilters);
   const { toast } = useToast();
+
+  const activeFilterCount = countActiveFilters(filters);
+
+  // Build full query from text + filters
+  const fullQuery = buildScryfallQuery(query, filters);
 
   // Debounce search
   useEffect(() => {
-    if (query.length < 2) {
+    if (fullQuery.length < 2) {
       setDebouncedQuery("");
       return;
     }
-    const timer = setTimeout(() => setDebouncedQuery(query), 350);
+    const timer = setTimeout(() => setDebouncedQuery(fullQuery), 350);
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [fullQuery]);
 
   const { data, isLoading, error } = useQuery<{ data: ScryfallCard[] }>({
     queryKey: ["/api/scryfall/search", debouncedQuery],
@@ -193,6 +277,177 @@ export default function SearchPage() {
         />
       </div>
 
+      {/* Filter toggle */}
+      <div>
+        <Button
+          variant="secondary"
+          size="sm"
+          className="gap-1.5 rounded-lg"
+          onClick={() => setFiltersOpen(!filtersOpen)}
+        >
+          <Filter className="w-3.5 h-3.5" />
+          Filters
+          {activeFilterCount > 0 && (
+            <span className="ml-1 w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+              {activeFilterCount}
+            </span>
+          )}
+          {filtersOpen ? <ChevronUp className="w-3 h-3 ml-0.5" /> : <ChevronDown className="w-3 h-3 ml-0.5" />}
+        </Button>
+      </div>
+
+      {/* Collapsible filter panel */}
+      {filtersOpen && (
+        <div className="space-y-3 p-4 rounded-xl bg-card/50 border border-border/50 animate-fade-in-up">
+          {/* Color filter */}
+          <div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1.5">Color</div>
+            <div className="flex flex-wrap gap-1.5">
+              {manaColors.map((c) => {
+                const isC = c.code === "C";
+                const selected = filters.colors.includes(c.code);
+                return (
+                  <button
+                    key={c.code}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      selected
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground hover:text-foreground"
+                    }`}
+                    onClick={() => {
+                      setFilters((f) => {
+                        if (isC) {
+                          return { ...f, colors: selected ? [] : ["C"] };
+                        }
+                        const without = f.colors.filter((x) => x !== c.code && x !== "C");
+                        return {
+                          ...f,
+                          colors: selected ? without : [...without, c.code],
+                        };
+                      });
+                    }}
+                  >
+                    {!isC && (
+                      <img
+                        src={`https://svgs.scryfall.io/card-symbols/${c.code}.svg`}
+                        alt={c.label}
+                        className="w-4 h-4"
+                      />
+                    )}
+                    {isC ? "Colorless" : c.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* CMC filter */}
+          <div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1.5">CMC</div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <select
+                className="h-8 px-2 rounded-lg bg-muted text-sm border-0 focus:ring-1 focus:ring-primary"
+                value={filters.cmcOp}
+                onChange={(e) => setFilters((f) => ({ ...f, cmcOp: e.target.value as SearchFilters["cmcOp"] }))}
+              >
+                <option value="">—</option>
+                <option value="=">=</option>
+                <option value=">=">&gt;=</option>
+                <option value="<=">&lt;=</option>
+              </select>
+              <div className="flex gap-1">
+                {["0", "1", "2", "3", "4", "5", "6", "7+"].map((v) => {
+                  const val = v.replace("+", "");
+                  const selected = filters.cmcValue === val && filters.cmcOp !== "";
+                  return (
+                    <button
+                      key={v}
+                      className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${
+                        selected
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground hover:text-foreground"
+                      }`}
+                      onClick={() => {
+                        setFilters((f) => ({
+                          ...f,
+                          cmcValue: f.cmcValue === val ? "" : val,
+                          cmcOp: f.cmcOp || "=",
+                        }));
+                      }}
+                    >
+                      {v}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Type filter */}
+          <div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1.5">Type</div>
+            <div className="flex flex-wrap gap-1.5">
+              {cardTypes.map((t) => (
+                <button
+                  key={t}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    filters.type === t
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:text-foreground"
+                  }`}
+                  onClick={() => setFilters((f) => ({ ...f, type: f.type === t ? "" : t }))}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Rarity filter */}
+          <div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1.5">Rarity</div>
+            <div className="flex flex-wrap gap-1.5">
+              {rarities.map((r) => (
+                <button
+                  key={r.value}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    filters.rarity === r.value
+                      ? r.color
+                      : "bg-muted text-muted-foreground hover:text-foreground"
+                  }`}
+                  onClick={() => setFilters((f) => ({ ...f, rarity: f.rarity === r.value ? "" : r.value }))}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Set code filter */}
+          <div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1.5">Set Code</div>
+            <Input
+              placeholder="e.g. mkm, one, dmu"
+              value={filters.setCode}
+              onChange={(e) => setFilters((f) => ({ ...f, setCode: e.target.value }))}
+              className="h-8 w-40 text-xs bg-muted border-0"
+            />
+          </div>
+
+          {/* Clear filters */}
+          {activeFilterCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-muted-foreground"
+              onClick={() => setFilters(defaultFilters)}
+            >
+              Clear all filters
+            </Button>
+          )}
+        </div>
+      )}
+
       {/* Error */}
       {error && (
         <div className="text-sm text-destructive bg-destructive/10 rounded-xl p-4">
@@ -241,7 +496,7 @@ export default function SearchPage() {
         </div>
       )}
 
-      {!query && <HomeDashboard decks={decks} />}
+      {!fullQuery && <HomeDashboard decks={decks} />}
 
       {/* Card detail dialog */}
       <CardDetailDialog
@@ -251,6 +506,8 @@ export default function SearchPage() {
         onAddToCollection={(card) => addToCollection.mutate(card)}
         onToggleWishlist={(card) => toggleWishlist.mutate(card)}
         isWishlisted={selectedCard ? wishlistIds.has(selectedCard.id) : false}
+        decks={decks}
+        onAddToDeck={(card, deckId) => addToDeck.mutate({ card, deckId })}
       />
     </div>
   );
