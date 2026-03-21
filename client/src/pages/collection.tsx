@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Minus, Plus, Trash2, DollarSign, BookOpen } from "lucide-react";
+import { Search, Minus, Plus, Trash2, DollarSign, BookOpen, Import } from "lucide-react";
+import ImportDialog from "@/components/ImportDialog";
 import type { CollectionCard } from "@shared/schema";
 
 const colorFilters = [
@@ -20,6 +21,7 @@ const colorFilters = [
 export default function CollectionPage() {
   const [search, setSearch] = useState("");
   const [colorFilter, setColorFilter] = useState("all");
+  const [importOpen, setImportOpen] = useState(false);
   const { toast } = useToast();
 
   const { data: cards = [], isLoading } = useQuery<CollectionCard[]>({
@@ -95,7 +97,7 @@ export default function CollectionPage() {
         </div>
       </div>
 
-      {/* Search + filters */}
+      {/* Search + filters + import */}
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -108,6 +110,16 @@ export default function CollectionPage() {
             data-testid="collection-search"
           />
         </div>
+        <Button
+          variant="secondary"
+          size="sm"
+          className="gap-1.5 shrink-0"
+          onClick={() => setImportOpen(true)}
+          data-testid="import-collection-btn"
+        >
+          <Import className="w-3.5 h-3.5" />
+          Import
+        </Button>
         <div className="flex gap-1 flex-wrap">
           {colorFilters.map((f) => (
             <button
@@ -249,6 +261,12 @@ export default function CollectionPage() {
           </p>
         </div>
       )}
+
+      {/* Import dialog */}
+      <ImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+      />
     </div>
   );
 }

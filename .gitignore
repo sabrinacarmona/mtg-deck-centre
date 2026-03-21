@@ -1,1 +1,7 @@
-node_modules/\ndist/\ndata.db\n*.db\n.env
+node_modules/
+dist/
+data.db
+*.db
+*.db-shm
+*.db-wal
+.env

@@ -116,6 +116,109 @@ export async function registerRoutes(
     }
   });
 
+  // ===== SCRYFALL FUZZY NAMED =====
+  app.get("/api/scryfall/named", async (req, res) => {
+    const fuzzy = req.query.fuzzy as string;
+    if (!fuzzy) return res.status(400).json({ error: "fuzzy param required" });
+
+    try {
+      const response = await fetch(
+        `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(fuzzy)}`
+      );
+      if (!response.ok) {
+        if (response.status === 404) return res.status(404).json({ error: "Card not found" });
+        throw new Error(`Scryfall error: ${response.status}`);
+      }
+      const data = await response.json();
+      res.json(data);
+    } catch (e: any) {
+      res.status(502).json({ error: e.message });
+    }
+  });
+
+  // ===== SCRYFALL COLLECTION (batch lookup by name) =====
+  app.post("/api/scryfall/collection", async (req, res) => {
+    const { identifiers } = req.body;
+    if (!identifiers || !Array.isArray(identifiers)) {
+      return res.status(400).json({ error: "identifiers array required" });
+    }
+
+    try {
+      // Scryfall allows max 75 identifiers per request
+      const allCards: any[] = [];
+      const allNotFound: any[] = [];
+
+      for (let i = 0; i < identifiers.length; i += 75) {
+        const batch = identifiers.slice(i, i + 75);
+        const response = await fetch("https://api.scryfall.com/cards/collection", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ identifiers: batch }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Scryfall error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        allCards.push(...(data.data || []));
+        allNotFound.push(...(data.not_found || []));
+
+        // Rate-limit: 50ms between requests
+        if (i + 75 < identifiers.length) {
+          await new Promise((r) => setTimeout(r, 100));
+        }
+      }
+
+      res.json({ data: allCards, not_found: allNotFound });
+    } catch (e: any) {
+      res.status(502).json({ error: e.message });
+    }
+  });
+
+  // ===== BULK IMPORT TO COLLECTION =====
+  app.post("/api/import/collection", async (req, res) => {
+    const { cards } = req.body;
+    if (!cards || !Array.isArray(cards)) {
+      return res.status(400).json({ error: "cards array required" });
+    }
+
+    const results: { added: number; failed: string[] } = { added: 0, failed: [] };
+
+    for (const card of cards) {
+      try {
+        await storage.addCollectionCard(card);
+        results.added++;
+      } catch (e: any) {
+        results.failed.push(card.name || "Unknown");
+      }
+    }
+
+    res.json(results);
+  });
+
+  // ===== BULK IMPORT TO DECK =====
+  app.post("/api/import/deck/:deckId", async (req, res) => {
+    const deckId = Number(req.params.deckId);
+    const { cards } = req.body;
+    if (!cards || !Array.isArray(cards)) {
+      return res.status(400).json({ error: "cards array required" });
+    }
+
+    const results: { added: number; failed: string[] } = { added: 0, failed: [] };
+
+    for (const card of cards) {
+      try {
+        await storage.addDeckCard({ ...card, deckId });
+        results.added++;
+      } catch (e: any) {
+        results.failed.push(card.name || "Unknown");
+      }
+    }
+
+    res.json(results);
+  });
+
   app.get("/api/scryfall/random", async (_req, res) => {
     try {
       const response = await fetch("https://api.scryfall.com/cards/random");

@@ -10,7 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import ManaCurve from "@/components/ManaCurve";
 import ColorDistribution from "@/components/ColorDistribution";
 import CardGrid from "@/components/CardGrid";
-import { ArrowLeft, Search, Minus, Plus, Trash2, Layers3 } from "lucide-react";
+import { ArrowLeft, Search, Minus, Plus, Trash2, Layers3, Import } from "lucide-react";
+import ImportDialog from "@/components/ImportDialog";
 import type { Deck, DeckCard, ScryfallCard } from "@shared/schema";
 
 export default function DeckDetailPage() {
@@ -19,6 +20,7 @@ export default function DeckDetailPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [board, setBoard] = useState<"main" | "side">("main");
+  const [importOpen, setImportOpen] = useState(false);
   const { toast } = useToast();
 
   // Debounce search
@@ -195,8 +197,8 @@ export default function DeckDetailPage() {
             />
           </div>
 
-          {/* Board selector */}
-          <div className="flex gap-2">
+          {/* Board selector + import */}
+          <div className="flex gap-2 items-center">
             <button
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                 board === "main"
@@ -219,6 +221,18 @@ export default function DeckDetailPage() {
             >
               Sideboard
             </button>
+            <div className="ml-auto">
+              <Button
+                variant="secondary"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => setImportOpen(true)}
+                data-testid="import-deck-btn"
+              >
+                <Import className="w-3.5 h-3.5" />
+                Import
+              </Button>
+            </div>
           </div>
 
           {/* Search results */}
@@ -281,6 +295,14 @@ export default function DeckDetailPage() {
           </Tabs>
         </div>
       </div>
+
+      {/* Import dialog */}
+      <ImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        deckId={deckId}
+        board={board}
+      />
     </div>
   );
 }
