@@ -12,6 +12,10 @@ import {
   Eye,
   ShieldCheck,
   Sparkles,
+  Target,
+  Wrench,
+  Globe,
+  Lightbulb,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -535,6 +539,198 @@ export default function LearnPage() {
                     In Commander, the first mulligan is free. After that, put 1 card on the bottom per mulligan.
                   </p>
                 </div>
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+        {/* ── Section 7: Strategy Archetypes ──────────────────── */}
+        <AccordionItem value="archetypes" className="card-frame overflow-hidden border-0">
+          <AccordionTrigger className="px-4 py-3 hover:no-underline">
+            <div className="flex items-center gap-2">
+              <Target className="w-4 h-4 text-primary" />
+              <span className="text-sm font-semibold">Strategy Archetypes</span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="px-4 pb-4">
+            <div className="space-y-4 text-sm text-foreground/80">
+              <p>Every deck falls into one of three broad strategic archetypes. Understanding these helps you know what your deck is trying to do — and what your opponent is up to.</p>
+              <div className="space-y-3">
+                {[
+                  ["Aggro", "R", "Win fast. Flood the board with cheap, aggressive creatures and burn spells. Aim to close out before your opponent stabilises. Weakness: runs out of cards if the game goes long.", "Your Draconic Destruction deck leans aggro — ramp fast, slam dragons, attack."],
+                  ["Control", "U", "Win late. Use counterspells, removal, and card draw to answer every threat. Eventually win with a single powerful finisher. Weakness: slow starts and vulnerable to explosive aggro.", "Will's First Flight has control elements — Counterspell, Negate, and Isperia drawing cards."],
+                  ["Midrange", "G", "Win on value. Play efficient threats that are individually powerful. Can pivot between aggro and control depending on the matchup. The flexible middle ground.", "Grand Larceny is midrange — stealing opponents' best cards and using them."],
+                ].map(([name, mana, desc, example]) => (
+                  <div key={name} className="rounded-lg bg-card/60 p-3 border border-border/40">
+                    <div className="flex items-center gap-2 mb-1">
+                      <ManaSymbol symbol={mana} size={18} />
+                      <span className="font-bold">{name}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{desc}</p>
+                    <p className="text-xs text-primary/70 mt-1 italic">{example}</p>
+                  </div>
+                ))}
+              </div>
+              <div>
+                <h4 className="font-semibold text-primary mb-1">The Rock-Paper-Scissors</h4>
+                <p>Generally: Aggro beats Control (too fast to answer), Control beats Midrange (too much removal), Midrange beats Aggro (bigger creatures). This isn't absolute, but it's a useful mental model.</p>
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* ── Section 8: Deckbuilding Basics ────────────────────── */}
+        <AccordionItem value="deckbuilding" className="card-frame overflow-hidden border-0">
+          <AccordionTrigger className="px-4 py-3 hover:no-underline">
+            <div className="flex items-center gap-2">
+              <Wrench className="w-4 h-4 text-primary" />
+              <span className="text-sm font-semibold">Deckbuilding Basics</span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="px-4 pb-4">
+            <div className="space-y-4 text-sm text-foreground/80">
+              <div>
+                <h4 className="font-semibold text-primary mb-1">60-Card Deck Framework</h4>
+                <p className="mb-2">For a standard 60-card deck:</p>
+                <div className="space-y-1.5">
+                  {[
+                    ["24", "Lands", "Ensures you hit land drops consistently. The #1 reason beginners lose is not enough lands."],
+                    ["36", "Non-land spells", "Follow the 'Rule of Nine': pick 9 different cards you want, run 4 copies of each."],
+                    ["1–2", "Colors", "Stick to 1-2 colors to avoid mana problems. Multi-color mana bases need expensive dual lands."],
+                  ].map(([num, title, desc]) => (
+                    <div key={num} className="flex items-start gap-2">
+                      <span className="text-xs bg-primary/15 text-primary px-1.5 py-0.5 rounded font-bold shrink-0">
+                        {num}
+                      </span>
+                      <p><strong>{title}</strong> — {desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-primary mb-1">Commander Deckbuilding</h4>
+                <p className="mb-2">For a 100-card Commander deck, the typical split is:</p>
+                <div className="space-y-1.5">
+                  {[
+                    ["36–38", "Lands", "Commander games go long — you need consistent mana. Include 2-3 utility lands (Command Tower, Path of Ancestry)."],
+                    ["10", "Ramp", "Sol Ring, signets, talismans, Cultivate. Getting ahead on mana wins Commander games."],
+                    ["10", "Card draw", "You need to refuel. Enchantments like Elemental Bond, instants like Harmonize."],
+                    ["8–10", "Removal", "Single-target (Swords to Plowshares) and board wipes (Cleansing Nova). Always pack some."],
+                    ["30+", "Your strategy", "The fun stuff — creatures, combos, synergy pieces that make your deck do its thing."],
+                  ].map(([num, title, desc]) => (
+                    <div key={num} className="flex items-start gap-2">
+                      <span className="text-xs bg-primary/15 text-primary px-1.5 py-0.5 rounded font-bold shrink-0">
+                        {num}
+                      </span>
+                      <p><strong>{title}</strong> — {desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-primary mb-1">Mana Curve</h4>
+                <p>
+                  Your mana curve is the distribution of cards by mana cost. A good curve means you have something to play every turn. Too many expensive cards = doing nothing early. Too many cheap cards = running out of gas late. In Commander, aim for a curve peaking at 3-4 mana.
+                </p>
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-primary mb-1">Win Condition</h4>
+                <p>
+                  Every deck needs a clear win condition — know what your deck is trying to do.
+                  Is it attacking with big creatures? Comboing off? Draining life?
+                  If you can't answer "how does this deck win?", the deck needs work.
+                </p>
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* ── Section 9: Formats Overview ───────────────────────── */}
+        <AccordionItem value="formats" className="card-frame overflow-hidden border-0">
+          <AccordionTrigger className="px-4 py-3 hover:no-underline">
+            <div className="flex items-center gap-2">
+              <Globe className="w-4 h-4 text-primary" />
+              <span className="text-sm font-semibold">Formats Overview</span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="px-4 pb-4">
+            <div className="space-y-4 text-sm text-foreground/80">
+              <p>Magic has many ways to play. Formats control which cards are legal and how decks are built.</p>
+
+              <div>
+                <h4 className="font-semibold text-primary mb-2">Constructed Formats</h4>
+                <div className="space-y-2">
+                  {[
+                    ["Commander (EDH)", "100 cards, singleton, 40 life", "The most popular format globally. Social, casual, multiplayer. This is what you play!"],
+                    ["Standard", "60+ cards, last ~3 years of sets", "Rotates annually. The default competitive format on MTG Arena."],
+                    ["Modern", "60+ cards, sets from 2003+", "Huge non-rotating card pool. Powerful and diverse."],
+                    ["Pioneer", "60+ cards, sets from 2012+", "Non-rotating, newer card pool than Modern."],
+                    ["Pauper", "60+ cards, commons only", "Budget-friendly. Proves great gameplay doesn't need expensive cards."],
+                  ].map(([name, size, desc]) => (
+                    <div key={name} className="border-l-2 border-primary/30 pl-3">
+                      <div className="flex items-baseline gap-2">
+                        <span className="font-semibold">{name}</span>
+                        <span className="text-[10px] text-muted-foreground">{size}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-primary mb-2">Limited Formats</h4>
+                <div className="space-y-2">
+                  {[
+                    ["Sealed", "Open 6 packs, build a 40-card deck from them. Great for prereleases and casual events."],
+                    ["Draft", "Sit in a circle, open packs, pick one card and pass. Builds skill fast — you learn to evaluate cards on the fly."],
+                  ].map(([name, desc]) => (
+                    <div key={name} className="border-l-2 border-primary/30 pl-3">
+                      <span className="font-semibold">{name}</span>
+                      <p className="text-xs text-muted-foreground">{desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-primary mb-1">Universes Beyond</h4>
+                <p>
+                  Since 2021, Magic has released crossover sets featuring other franchises. Your Hosts of Mordor deck is from The Lord of the Rings set, and Will's Science! deck is from the Fallout set. Starting in 2025, Universes Beyond sets are Standard-legal. Upcoming: Marvel Super Heroes and Star Trek.
+                </p>
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* ── Section 10: Pro Tips ──────────────────────────────── */}
+        <AccordionItem value="tips" className="card-frame overflow-hidden border-0">
+          <AccordionTrigger className="px-4 py-3 hover:no-underline">
+            <div className="flex items-center gap-2">
+              <Lightbulb className="w-4 h-4 text-primary" />
+              <span className="text-sm font-semibold">Pro Tips for New Players</span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="px-4 pb-4">
+            <div className="space-y-3 text-sm text-foreground/80">
+              <div className="space-y-2">
+                {[
+                  ["Don't buy packs to build decks", "The odds of getting what you need are poor. Buy specific single cards from TCGPlayer, Card Kingdom, or Cardmarket instead. Packs are for drafting and fun."],
+                  ["Goldfish your decks", "Draw practice hands and play several turns against an imaginary opponent. It's the fastest way to learn whether your deck works. (You can do this in the Goldfish tab!)"],
+                  ["Don't overextend", "Dumping your whole hand onto the board feels great until your opponent plays a board wipe. Keep 1-2 threats in reserve."],
+                  ["Read your opponents' mana", "If they have 2 blue mana untapped, they probably have a counterspell. If they have white mana up, watch for removal. Play around what they might have."],
+                  ["Removal is always worth including", "Even if your deck has a clear theme, always run 8-10 removal spells. You need answers to what opponents are doing."],
+                  ["Don't become the archenemy", "In Commander, the biggest threat gets attacked by everyone. Stay under the radar early, then strike when you're ready."],
+                  ["Lands win games", "The #1 reason newer players lose is bad mana. Run enough lands. Hit your land drops. Mana screw isn't bad luck — it's bad deckbuilding."],
+                  ["Have a plan for each matchup", "Before each game against Will, think: how does my deck beat his? Am I faster? Do I go wide? Can I remove his key pieces? Check the Rivals tab for specific counter-strategies."],
+                ].map(([title, desc], i) => (
+                  <div key={i} className="rounded-lg bg-card/60 p-3 border border-border/40">
+                    <h4 className="font-semibold text-xs text-primary mb-0.5">{title}</h4>
+                    <p className="text-xs text-muted-foreground">{desc}</p>
+                  </div>
+                ))}
               </div>
             </div>
           </AccordionContent>
