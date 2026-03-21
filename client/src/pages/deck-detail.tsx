@@ -10,7 +10,17 @@ import { useToast } from "@/hooks/use-toast";
 import ManaCurve from "@/components/ManaCurve";
 import ColorDistribution from "@/components/ColorDistribution";
 import CardGrid from "@/components/CardGrid";
-import { ArrowLeft, Search, Minus, Plus, Trash2, Layers3, Import } from "lucide-react";
+import {
+  ArrowLeft,
+  Search,
+  Minus,
+  Plus,
+  Trash2,
+  Import,
+  ChevronDown,
+  ChevronUp,
+  BarChart3,
+} from "lucide-react";
 import ImportDialog from "@/components/ImportDialog";
 import type { Deck, DeckCard, ScryfallCard } from "@shared/schema";
 
@@ -21,9 +31,9 @@ export default function DeckDetailPage() {
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [board, setBoard] = useState<"main" | "side">("main");
   const [importOpen, setImportOpen] = useState(false);
+  const [statsOpen, setStatsOpen] = useState(false);
   const { toast } = useToast();
 
-  // Debounce search
   useEffect(() => {
     if (searchQuery.length < 2) {
       setDebouncedQuery("");
@@ -100,11 +110,7 @@ export default function DeckDetailPage() {
       });
     },
     onError: (err: Error) => {
-      toast({
-        title: "Error",
-        description: err.message,
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: err.message, variant: "destructive" });
     },
   });
 
@@ -139,15 +145,14 @@ export default function DeckDetailPage() {
 
   const mainCards = deckCards.filter((c) => c.board === "main");
   const sideCards = deckCards.filter((c) => c.board === "side");
+  const activeCards = board === "main" ? mainCards : sideCards;
   const totalMain = mainCards.reduce((s, c) => s + (c.quantity || 1), 0);
   const totalSide = sideCards.reduce((s, c) => s + (c.quantity || 1), 0);
   const avgCmc =
     mainCards.length > 0
       ? (
-          mainCards.reduce(
-            (s, c) => s + (c.cmc || 0) * (c.quantity || 1),
-            0
-          ) / totalMain
+          mainCards.reduce((s, c) => s + (c.cmc || 0) * (c.quantity || 1), 0) /
+          totalMain
         ).toFixed(1)
       : "0.0";
 
@@ -161,14 +166,14 @@ export default function DeckDetailPage() {
 
   return (
     <div className="space-y-4" data-testid="deck-detail-page">
-      {/* Back nav + title */}
+      {/* Header */}
       <div className="flex items-center gap-3">
         <Link href="/decks">
           <Button variant="ghost" size="icon" className="w-8 h-8" data-testid="back-btn">
             <ArrowLeft className="w-4 h-4" />
           </Button>
         </Link>
-        <div>
+        <div className="flex-1">
           <h1 className="text-lg font-bold">{deck.name}</h1>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Badge variant="outline" className="text-[10px] capitalize">
@@ -179,12 +184,93 @@ export default function DeckDetailPage() {
             <span>Avg CMC: {avgCmc}</span>
           </div>
         </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => setStatsOpen(!statsOpen)}
+            data-testid="toggle-stats-btn"
+          >
+            <BarChart3 className="w-3.5 h-3.5" />
+            Stats
+            {statsOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => setImportOpen(true)}
+            data-testid="import-deck-btn"
+          >
+            <Import className="w-3.5 h-3.5" />
+            Import
+          </Button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Left: Search + add */}
+      {/* Collapsible stats */}
+      {statsOpen && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="bg-card border border-card-border rounded-xl p-4 space-y-3">
+            <h3 className="text-sm font-semibold">Mana Curve</h3>
+            <ManaCurve cards={mainCards} />
+          </div>
+          <div className="bg-card border border-card-border rounded-xl p-4 space-y-3">
+            <h3 className="text-sm font-semibold">Colors</h3>
+            <ColorDistribution cards={mainCards} />
+          </div>
+        </div>
+      )}
+
+      {/* Board tabs */}
+      <div className="flex gap-2 items-center">
+        <button
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+            board === "main"
+              ? "bg-primary text-primary-foreground"
+              : "bg-muted text-muted-foreground"
+          }`}
+          onClick={() => setBoard("main")}
+          data-testid="board-main"
+        >
+          Mainboard ({totalMain})
+        </button>
+        <button
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+            board === "side"
+              ? "bg-primary text-primary-foreground"
+              : "bg-muted text-muted-foreground"
+          }`}
+          onClick={() => setBoard("side")}
+          data-testid="board-side"
+        >
+          Sideboard ({totalSide})
+        </button>
+      </div>
+
+      {/* Main layout: Left = deck cards visual, Right = search/add */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        {/* LEFT: Visual deck card grid */}
+        <div className="lg:col-span-3">
+          {activeCards.length === 0 ? (
+            <div className="text-center py-12 text-sm text-muted-foreground">
+              <div className="text-3xl mb-3">🃏</div>
+              No cards in {board === "main" ? "mainboard" : "sideboard"} yet.
+              <br />
+              Use the search panel to add cards.
+            </div>
+          ) : (
+            <DeckVisualGrid
+              cards={activeCards}
+              onUpdateQuantity={(id, qty) => updateQuantity.mutate({ id, quantity: qty })}
+              onRemove={(id) => removeCard.mutate(id)}
+            />
+          )}
+        </div>
+
+        {/* RIGHT: Search + add panel */}
         <div className="lg:col-span-2 space-y-3">
-          {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -197,45 +283,6 @@ export default function DeckDetailPage() {
             />
           </div>
 
-          {/* Board selector + import */}
-          <div className="flex gap-2 items-center">
-            <button
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                board === "main"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground"
-              }`}
-              onClick={() => setBoard("main")}
-              data-testid="board-main"
-            >
-              Mainboard
-            </button>
-            <button
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                board === "side"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground"
-              }`}
-              onClick={() => setBoard("side")}
-              data-testid="board-side"
-            >
-              Sideboard
-            </button>
-            <div className="ml-auto">
-              <Button
-                variant="secondary"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => setImportOpen(true)}
-                data-testid="import-deck-btn"
-              >
-                <Import className="w-3.5 h-3.5" />
-                Import
-              </Button>
-            </div>
-          </div>
-
-          {/* Search results */}
           {debouncedQuery.length >= 2 && (
             <CardGrid
               cards={searchCards}
@@ -246,57 +293,13 @@ export default function DeckDetailPage() {
 
           {!searchQuery && (
             <div className="text-center py-8 text-sm text-muted-foreground">
+              <Search className="w-8 h-8 mx-auto mb-3 opacity-30" />
               Search for cards to add to your deck
             </div>
           )}
         </div>
-
-        {/* Right: Deck list + stats */}
-        <div className="space-y-4">
-          {/* Stats */}
-          <div className="bg-card border border-card-border rounded-xl p-4 space-y-4">
-            <h3 className="text-sm font-semibold">Mana Curve</h3>
-            <ManaCurve cards={mainCards} />
-          </div>
-
-          <div className="bg-card border border-card-border rounded-xl p-4 space-y-3">
-            <h3 className="text-sm font-semibold">Colors</h3>
-            <ColorDistribution cards={mainCards} />
-          </div>
-
-          {/* Card list */}
-          <Tabs defaultValue="main">
-            <TabsList className="w-full">
-              <TabsTrigger value="main" className="flex-1 text-xs">
-                Main ({totalMain})
-              </TabsTrigger>
-              <TabsTrigger value="side" className="flex-1 text-xs">
-                Side ({totalSide})
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="main">
-              <DeckCardList
-                cards={mainCards}
-                onUpdateQuantity={(id, qty) =>
-                  updateQuantity.mutate({ id, quantity: qty })
-                }
-                onRemove={(id) => removeCard.mutate(id)}
-              />
-            </TabsContent>
-            <TabsContent value="side">
-              <DeckCardList
-                cards={sideCards}
-                onUpdateQuantity={(id, qty) =>
-                  updateQuantity.mutate({ id, quantity: qty })
-                }
-                onRemove={(id) => removeCard.mutate(id)}
-              />
-            </TabsContent>
-          </Tabs>
-        </div>
       </div>
 
-      {/* Import dialog */}
       <ImportDialog
         open={importOpen}
         onOpenChange={setImportOpen}
@@ -307,7 +310,8 @@ export default function DeckDetailPage() {
   );
 }
 
-function DeckCardList({
+/** Visual grid of deck cards with images, quantity badges, and hover controls */
+function DeckVisualGrid({
   cards,
   onUpdateQuantity,
   onRemove,
@@ -316,69 +320,127 @@ function DeckCardList({
   onUpdateQuantity: (id: number, qty: number) => void;
   onRemove: (id: number) => void;
 }) {
-  if (cards.length === 0) {
-    return (
-      <div className="text-center py-6 text-sm text-muted-foreground">
-        No cards yet
-      </div>
-    );
-  }
-
-  // Group by type
+  // Group by type category
   const grouped: Record<string, DeckCard[]> = {};
   for (const card of cards) {
-    const type = card.typeLine.split("—")[0].trim().split(" ").pop() || "Other";
+    const rawType = card.typeLine.split("—")[0].trim();
+    let type = "Other";
+    if (rawType.includes("Creature")) type = "Creatures";
+    else if (rawType.includes("Instant")) type = "Instants";
+    else if (rawType.includes("Sorcery")) type = "Sorceries";
+    else if (rawType.includes("Enchantment")) type = "Enchantments";
+    else if (rawType.includes("Artifact")) type = "Artifacts";
+    else if (rawType.includes("Planeswalker")) type = "Planeswalkers";
+    else if (rawType.includes("Land")) type = "Lands";
     if (!grouped[type]) grouped[type] = [];
     grouped[type].push(card);
   }
 
+  const typeOrder = [
+    "Creatures",
+    "Planeswalkers",
+    "Instants",
+    "Sorceries",
+    "Enchantments",
+    "Artifacts",
+    "Lands",
+    "Other",
+  ];
+
+  const sortedGroups = typeOrder
+    .filter((t) => grouped[t]?.length > 0)
+    .map((t) => ({ type: t, cards: grouped[t] }));
+
   return (
-    <div className="space-y-3 mt-2">
-      {Object.entries(grouped).map(([type, typeCards]) => (
+    <div className="space-y-5">
+      {sortedGroups.map(({ type, cards: typeCards }) => (
         <div key={type}>
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1">
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">
             {type} ({typeCards.reduce((s, c) => s + (c.quantity || 1), 0)})
           </div>
-          <div className="space-y-0.5">
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-4 xl:grid-cols-5 gap-2">
             {typeCards.map((card) => (
-              <div
+              <DeckCardTile
                 key={card.id}
-                className="flex items-center gap-2 py-1 px-1.5 rounded hover:bg-muted/50 transition-colors group"
-                data-testid={`deck-card-${card.id}`}
-              >
-                <span className="text-xs font-semibold text-muted-foreground w-4 text-right">
-                  {card.quantity}x
-                </span>
-                <span className="text-xs flex-1 truncate">{card.name}</span>
-                <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    className="p-0.5 text-muted-foreground hover:text-foreground"
-                    onClick={() =>
-                      onUpdateQuantity(card.id, (card.quantity || 1) - 1)
-                    }
-                  >
-                    <Minus className="w-3 h-3" />
-                  </button>
-                  <button
-                    className="p-0.5 text-muted-foreground hover:text-foreground"
-                    onClick={() =>
-                      onUpdateQuantity(card.id, (card.quantity || 1) + 1)
-                    }
-                  >
-                    <Plus className="w-3 h-3" />
-                  </button>
-                  <button
-                    className="p-0.5 text-destructive hover:text-destructive/80"
-                    onClick={() => onRemove(card.id)}
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                </div>
-              </div>
+                card={card}
+                onUpdateQuantity={onUpdateQuantity}
+                onRemove={onRemove}
+              />
             ))}
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+/** Single card tile with image, quantity badge, and hover controls */
+function DeckCardTile({
+  card,
+  onUpdateQuantity,
+  onRemove,
+}: {
+  card: DeckCard;
+  onUpdateQuantity: (id: number, qty: number) => void;
+  onRemove: (id: number) => void;
+}) {
+  return (
+    <div
+      className="relative group cursor-default"
+      data-testid={`deck-card-${card.id}`}
+    >
+      {/* Card image */}
+      {card.imageSmall || card.imageNormal ? (
+        <img
+          src={card.imageNormal || card.imageSmall || ""}
+          alt={card.name}
+          className="w-full rounded-lg card-hover"
+          loading="lazy"
+        />
+      ) : (
+        <div className="w-full aspect-[5/7] rounded-lg bg-muted flex items-center justify-center">
+          <span className="text-[10px] text-muted-foreground text-center px-1">
+            {card.name}
+          </span>
+        </div>
+      )}
+
+      {/* Quantity badge */}
+      {(card.quantity || 1) > 1 && (
+        <div className="absolute top-1 left-1 bg-primary text-primary-foreground text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-lg">
+          {card.quantity}
+        </div>
+      )}
+
+      {/* Hover overlay with controls */}
+      <div className="absolute inset-0 bg-black/70 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5">
+        <span className="text-[10px] text-white font-medium text-center px-2 leading-tight">
+          {card.name}
+        </span>
+        <div className="flex items-center gap-1">
+          <button
+            className="w-6 h-6 rounded bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors"
+            onClick={() => onUpdateQuantity(card.id, (card.quantity || 1) - 1)}
+          >
+            <Minus className="w-3 h-3" />
+          </button>
+          <span className="text-white text-xs font-bold w-5 text-center">
+            {card.quantity || 1}
+          </span>
+          <button
+            className="w-6 h-6 rounded bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors"
+            onClick={() => onUpdateQuantity(card.id, (card.quantity || 1) + 1)}
+          >
+            <Plus className="w-3 h-3" />
+          </button>
+          <button
+            className="w-6 h-6 rounded bg-red-500/40 hover:bg-red-500/60 flex items-center justify-center text-white transition-colors ml-1"
+            onClick={() => onRemove(card.id)}
+          >
+            <Trash2 className="w-3 h-3" />
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
