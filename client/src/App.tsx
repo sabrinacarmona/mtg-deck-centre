@@ -15,6 +15,8 @@ import ComparePage from "@/pages/compare";
 import WishlistPage from "@/pages/wishlist";
 import LearnPage from "@/pages/learn";
 import RivalsPage from "@/pages/rivals";
+import GameNightPage from "@/pages/game-night";
+import GoldfishPage from "@/pages/goldfish";
 import AppLayout from "@/components/AppLayout";
 import { initSeedIfNeeded } from "./lib/db";
 
@@ -57,6 +59,8 @@ function AppRouter() {
         <Route path="/wishlist" component={WishlistPage} />
         <Route path="/learn" component={LearnPage} />
         <Route path="/rivals" component={RivalsPage} />
+        <Route path="/game-night" component={GameNightPage} />
+        <Route path="/goldfish" component={GoldfishPage} />
         <Route path="/scanner" component={ScannerPage} />
         <Route component={NotFound} />
       </Switch>

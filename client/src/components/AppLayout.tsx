@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Search, BookOpen, Layers3, Camera, Heart, GraduationCap, Swords } from "lucide-react";
+import { Search, BookOpen, Layers3, Camera, Heart, GraduationCap, Swords, Gamepad2, Hand } from "lucide-react";
 import { PerplexityAttribution } from "./PerplexityAttribution";
 
 const navItems = [
@@ -9,6 +9,8 @@ const navItems = [
   { path: "/wishlist", icon: Heart, label: "Wishlist" },
   { path: "/learn", icon: GraduationCap, label: "Learn" },
   { path: "/rivals", icon: Swords, label: "Rivals" },
+  { path: "/game-night", icon: Gamepad2, label: "Game Night" },
+  { path: "/goldfish", icon: Hand, label: "Goldfish" },
   { path: "/scanner", icon: Camera, label: "Scanner" },
 ];
 
