@@ -9,6 +9,7 @@ import SearchPage from "@/pages/search";
 import CollectionPage from "@/pages/collection";
 import DecksPage from "@/pages/decks";
 import DeckDetailPage from "@/pages/deck-detail";
+import SharedDeckPage from "@/pages/shared-deck";
 import ScannerPage from "@/pages/scanner";
 import ComparePage from "@/pages/compare";
 import WishlistPage from "@/pages/wishlist";
@@ -21,24 +22,33 @@ import AppLayout from "@/components/AppLayout";
 
 function AppRouter() {
   return (
-    <AppLayout>
-      <Switch>
-        <Route path="/" component={SearchPage} />
-        <Route path="/search" component={SearchPage} />
-        <Route path="/collection" component={CollectionPage} />
-        <Route path="/decks" component={DecksPage} />
-        <Route path="/decks/:id" component={DeckDetailPage} />
-        <Route path="/compare" component={ComparePage} />
-        <Route path="/wishlist" component={WishlistPage} />
-        <Route path="/learn" component={LearnPage} />
-        <Route path="/rivals" component={RivalsPage} />
-        <Route path="/game-night" component={GameNightPage} />
-        <Route path="/goldfish" component={GoldfishPage} />
-        <Route path="/matchups" component={MatchupsPage} />
-        <Route path="/scanner" component={ScannerPage} />
-        <Route component={NotFound} />
-      </Switch>
-    </AppLayout>
+    <Switch>
+      <Route path="/shared/:data">
+        <AppLayout>
+          <SharedDeckPage />
+        </AppLayout>
+      </Route>
+      <Route>
+        <AppLayout>
+          <Switch>
+            <Route path="/" component={SearchPage} />
+            <Route path="/search" component={SearchPage} />
+            <Route path="/collection" component={CollectionPage} />
+            <Route path="/decks" component={DecksPage} />
+            <Route path="/decks/:id" component={DeckDetailPage} />
+            <Route path="/compare" component={ComparePage} />
+            <Route path="/wishlist" component={WishlistPage} />
+            <Route path="/learn" component={LearnPage} />
+            <Route path="/rivals" component={RivalsPage} />
+            <Route path="/game-night" component={GameNightPage} />
+            <Route path="/goldfish" component={GoldfishPage} />
+            <Route path="/matchups" component={MatchupsPage} />
+            <Route path="/scanner" component={ScannerPage} />
+            <Route component={NotFound} />
+          </Switch>
+        </AppLayout>
+      </Route>
+    </Switch>
   );
 }
 

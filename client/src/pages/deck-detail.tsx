@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useTags } from "@/hooks/use-tags";
+import { encodeSharedDeck } from "@/pages/shared-deck";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   Dialog,
@@ -22,6 +24,8 @@ import {
   ChevronDown,
   Copy,
   Download,
+  Filter,
+  X,
 } from "lucide-react";
 import ImportDialog from "@/components/ImportDialog";
 import ManaAnalyzer from "@/components/ManaAnalyzer";
@@ -33,6 +37,9 @@ import DeckStrategyGuide from "@/components/deck/DeckStrategyGuide";
 import DeckSearch from "@/components/deck/DeckSearch";
 import DeckCombos from "@/components/deck/DeckCombos";
 import DeckUpgrades from "@/components/deck/DeckUpgrades";
+import DeckRecommendations from "@/components/deck/DeckRecommendations";
+import CardTagEditor from "@/components/deck/CardTagEditor";
+import { getTagColor } from "@/hooks/use-tags";
 import type { Deck, DeckCard, ScryfallCard } from "@shared/schema";
 
 interface GameHistoryEntry {
@@ -57,8 +64,12 @@ export default function DeckDetailPage() {
   const [manaAnalysisOpen, setManaAnalysisOpen] = useState(false);
   const [combosOpen, setCombosOpen] = useState(false);
   const [upgradesOpen, setUpgradesOpen] = useState(false);
+  const [recsOpen, setRecsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [tagEditCard, setTagEditCard] = useState<DeckCard | null>(null);
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
   const { toast } = useToast();
+  const { tags, addTag, removeTag, allUsedTags, tagCounts, getCardTags } = useTags(deckId);
 
   const { data: deck } = useQuery<Deck>({
     queryKey: ["/api/decks", deckId],
@@ -168,12 +179,42 @@ export default function DeckDetailPage() {
     },
   });
 
+  const addToWishlist = useMutation({
+    mutationFn: async (card: { name: string; image?: string }) => {
+      // Fetch from Scryfall to get full card data
+      const res = await fetch(
+        `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(card.name)}`
+      );
+      if (!res.ok) throw new Error("Card not found");
+      const scryfallCard = await res.json();
+      const wishRes = await apiRequest("POST", "/api/wishlist", {
+        scryfallId: scryfallCard.id,
+        name: scryfallCard.name,
+        imageSmall: scryfallCard.image_uris?.small || scryfallCard.card_faces?.[0]?.image_uris?.small || null,
+        imageNormal: scryfallCard.image_uris?.normal || scryfallCard.card_faces?.[0]?.image_uris?.normal || null,
+        priceUsd: scryfallCard.prices?.usd || null,
+        typeLine: scryfallCard.type_line,
+        addedDate: new Date().toISOString().split("T")[0],
+      });
+      return wishRes.json();
+    },
+    onSuccess: (_data, card) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/wishlist"] });
+      toast({ title: `${card.name} added to wishlist` });
+    },
+    onError: () => {
+      toast({ title: "Failed to add to wishlist", variant: "destructive" });
+    },
+  });
+
   const mainCards = deckCards.filter((c) => c.board === "main");
   const sideCards = deckCards.filter((c) => c.board === "side");
   const activeCards = board === "main" ? mainCards : sideCards;
   const totalMain = mainCards.reduce((s, c) => s + (c.quantity || 1), 0);
   const totalSide = sideCards.reduce((s, c) => s + (c.quantity || 1), 0);
   const totalPrice = deckCards.reduce((sum, c) => sum + parseFloat(c.priceUsd || "0") * (c.quantity || 1), 0);
+
+  const commanderCard = mainCards.find((c) => c.isCommander);
 
   const handleExport = () => {
     const typeOrder = ["Creatures", "Planeswalkers", "Instants", "Sorceries", "Enchantments", "Artifacts", "Lands", "Other"];
@@ -244,6 +285,36 @@ export default function DeckDetailPage() {
     toast({ title: "Decklist downloaded" });
   };
 
+  const handleShare = () => {
+    if (!deck || mainCards.length === 0) {
+      toast({ title: "No cards to share", variant: "destructive" });
+      return;
+    }
+
+    const encoded = encodeSharedDeck({
+      name: deck.name,
+      format: deck.format,
+      commander: commanderCard?.name,
+      cards: mainCards.map((c) => ({ name: c.name, quantity: c.quantity || 1 })),
+    });
+
+    // Check URL length — browsers typically support up to ~8KB in URL
+    const baseUrl = window.location.origin + window.location.pathname;
+    const shareUrl = `${baseUrl}#/shared/${encoded}`;
+
+    if (shareUrl.length > 8000) {
+      toast({
+        title: "Deck is too large to share via URL",
+        description: "Use the text export instead.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    navigator.clipboard.writeText(shareUrl);
+    toast({ title: "Share link copied!" });
+  };
+
   if (!deck) {
     return (
       <div className="text-center py-16">
@@ -266,11 +337,33 @@ export default function DeckDetailPage() {
         onCopy={copyToClipboard}
         onExport={() => setExportOpen(true)}
         onImport={() => setImportOpen(true)}
+        onShare={handleShare}
       />
 
-      {statsOpen && <DeckStats cards={mainCards} />}
+      {statsOpen && (
+        <DeckStats
+          cards={mainCards}
+          tagCounts={tagCounts}
+          onTagFilter={setTagFilter}
+          activeTagFilter={tagFilter}
+        />
+      )}
 
       {guideOpen && <DeckStrategyGuide deckName={deck.name} />}
+
+      {/* Tag filter indicator */}
+      {tagFilter && (
+        <div className="flex items-center gap-2">
+          <Filter className="w-3.5 h-3.5 text-primary" />
+          <span className="text-xs text-muted-foreground">Filtered by:</span>
+          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${getTagColor(tagFilter)}`}>
+            {tagFilter}
+            <button onClick={() => setTagFilter(null)} className="hover:opacity-70">
+              <X className="w-2.5 h-2.5" />
+            </button>
+          </span>
+        </div>
+      )}
 
       {/* Board tabs */}
       <div className="flex gap-2 items-center">
@@ -313,6 +406,9 @@ export default function DeckDetailPage() {
               onRemove={(id) => removeCard.mutate(id)}
               onCardClick={(card) => setZoomedCard(card)}
               deckFormat={deck.format}
+              cardTags={tags}
+              onTagClick={(card) => setTagEditCard(card)}
+              tagFilter={tagFilter}
             />
           )}
         </div>
@@ -341,6 +437,16 @@ export default function DeckDetailPage() {
           <TooltipContent>Add Cards</TooltipContent>
         </Tooltip>
       )}
+
+      {/* EDHREC Recommendations */}
+      <DeckRecommendations
+        commanderName={commanderCard?.name}
+        deckFormat={deck.format}
+        open={recsOpen}
+        onToggle={() => setRecsOpen(!recsOpen)}
+        onAddCard={(card) => addCard.mutate(card)}
+        onAddToWishlist={(card) => addToWishlist.mutate(card)}
+      />
 
       {/* Game Log */}
       <div className="border border-card-border rounded-xl overflow-hidden">
@@ -427,6 +533,20 @@ export default function DeckDetailPage() {
           onUpdateQuantity={(id, qty) => updateQuantity.mutate({ id, quantity: qty })}
           onRemove={(id) => { removeCard.mutate(id); setZoomedCard(null); }}
           onToggleCommander={(id, isCommander) => toggleCommander.mutate({ id, isCommander })}
+          tags={getCardTags(zoomedCard.name)}
+          onTagClick={(card) => { setZoomedCard(null); setTagEditCard(card); }}
+        />
+      )}
+
+      {/* Tag Editor */}
+      {tagEditCard && (
+        <CardTagEditor
+          cardName={tagEditCard.name}
+          tags={getCardTags(tagEditCard.name)}
+          allUsedTags={allUsedTags}
+          onAddTag={addTag}
+          onRemoveTag={removeTag}
+          onClose={() => setTagEditCard(null)}
         />
       )}
 
