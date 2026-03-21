@@ -14,6 +14,7 @@ import ScannerPage from "@/pages/scanner";
 import ComparePage from "@/pages/compare";
 import WishlistPage from "@/pages/wishlist";
 import LearnPage from "@/pages/learn";
+import RivalsPage from "@/pages/rivals";
 import AppLayout from "@/components/AppLayout";
 import { initSeedIfNeeded } from "./lib/db";
 
@@ -28,10 +29,10 @@ function SeedingScreen() {
             <path d="M14 7L17.5 13L14 19L10.5 13L14 7Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
           </svg>
         </div>
-        <h2 className="text-lg font-semibold text-primary">Setting Up Your Collection</h2>
+        <h2 className="text-lg font-semibold text-primary">Opening the Vault...</h2>
         <p className="text-sm text-muted-foreground max-w-sm">
-          Loading your 4 Commander precon decks from Scryfall.
-          This only happens once...
+          Loading your Commander decks from Scryfall.
+          This only happens once.
         </p>
         <div className="flex items-center justify-center gap-2 pt-2">
           <div className="w-2 h-2 rounded-full bg-primary animate-bounce [animation-delay:0ms]" />
@@ -55,6 +56,7 @@ function AppRouter() {
         <Route path="/compare" component={ComparePage} />
         <Route path="/wishlist" component={WishlistPage} />
         <Route path="/learn" component={LearnPage} />
+        <Route path="/rivals" component={RivalsPage} />
         <Route path="/scanner" component={ScannerPage} />
         <Route component={NotFound} />
       </Switch>

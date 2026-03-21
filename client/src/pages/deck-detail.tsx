@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import ManaCurve from "@/components/ManaCurve";
+import { ManaCost } from "@/components/ManaSymbols";
 import ColorDistribution from "@/components/ColorDistribution";
 import CardGrid from "@/components/CardGrid";
 import {
@@ -867,7 +868,9 @@ function CardZoomOverlay({
             <h2 className="text-xl font-bold">{card.name}</h2>
             <p className="text-sm text-white/60">{card.typeLine}</p>
             {card.manaCost && (
-              <p className="text-sm text-white/50 mt-1">{card.manaCost}</p>
+              <div className="mt-1">
+                <ManaCost cost={card.manaCost} size="md" />
+              </div>
             )}
           </div>
 
@@ -879,9 +882,9 @@ function CardZoomOverlay({
 
           {/* Card tip */}
           {getCardTip(card) && (
-            <div className="flex items-start gap-1.5 text-xs text-amber-300/90 bg-amber-500/15 rounded-lg px-2.5 py-1.5 max-w-xs">
-              <Lightbulb className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-              <span>{getCardTip(card)}</span>
+            <div className="flex items-start gap-2 text-xs text-amber-200/90 bg-amber-500/10 border border-amber-500/25 rounded-lg px-3 py-2 max-w-xs backdrop-blur-sm">
+              <Lightbulb className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+              <span className="leading-relaxed">{getCardTip(card)}</span>
             </div>
           )}
 

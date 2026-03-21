@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Search, BookOpen, Layers3, Camera, Heart, GraduationCap } from "lucide-react";
+import { Search, BookOpen, Layers3, Camera, Heart, GraduationCap, Swords } from "lucide-react";
 import { PerplexityAttribution } from "./PerplexityAttribution";
 
 const navItems = [
@@ -8,6 +8,7 @@ const navItems = [
   { path: "/decks", icon: Layers3, label: "Decks" },
   { path: "/wishlist", icon: Heart, label: "Wishlist" },
   { path: "/learn", icon: GraduationCap, label: "Learn" },
+  { path: "/rivals", icon: Swords, label: "Rivals" },
   { path: "/scanner", icon: Camera, label: "Scanner" },
 ];
 
@@ -23,7 +24,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="flex items-center gap-2 cursor-pointer" data-testid="logo-link">
               <MtgLogo />
               <span className="text-lg font-bold tracking-tight text-primary">
-                Deck Centre
+                Sabrina's Vault
               </span>
             </div>
           </Link>
@@ -69,40 +70,44 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 function MtgLogo() {
   return (
     <svg
-      width="28"
-      height="28"
-      viewBox="0 0 28 28"
+      width="30"
+      height="30"
+      viewBox="0 0 30 30"
       fill="none"
-      aria-label="MTG Deck Centre"
+      aria-label="Sabrina's Vault"
       className="text-primary"
     >
-      {/* Pentagon shape - inspired by mana symbols */}
+      {/* Vault door - outer circle */}
+      <circle cx="15" cy="15" r="13" stroke="currentColor" strokeWidth="1.8" />
+      {/* Inner ring */}
+      <circle cx="15" cy="15" r="9.5" stroke="currentColor" strokeWidth="1" opacity="0.4" />
+      {/* Vault handle/wheel - cross */}
+      <line x1="15" y1="7" x2="15" y2="23" stroke="currentColor" strokeWidth="1.4" opacity="0.6" />
+      <line x1="7" y1="15" x2="23" y2="15" stroke="currentColor" strokeWidth="1.4" opacity="0.6" />
+      {/* Center gem - diamond shape */}
       <path
-        d="M14 2L25.5 10.5L21 24H7L2.5 10.5L14 2Z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-      {/* Inner star */}
-      <path
-        d="M14 7L17.5 13L14 19L10.5 13L14 7Z"
+        d="M15 10L19 15L15 20L11 15Z"
         fill="currentColor"
-        opacity="0.25"
+        opacity="0.3"
       />
       <path
-        d="M14 7L17.5 13L14 19L10.5 13L14 7Z"
+        d="M15 10L19 15L15 20L11 15Z"
         stroke="currentColor"
-        strokeWidth="1.2"
+        strokeWidth="1.3"
         strokeLinejoin="round"
       />
-      {/* Lightning bolt accent */}
-      <path
-        d="M13 10L15 13H12.5L14.5 17"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      {/* S monogram */}
+      <text
+        x="15"
+        y="16.5"
+        textAnchor="middle"
+        fill="currentColor"
+        fontSize="7"
+        fontWeight="bold"
+        fontFamily="serif"
+      >
+        S
+      </text>
     </svg>
   );
 }

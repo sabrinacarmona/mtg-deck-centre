@@ -115,6 +115,23 @@ export async function apiRequest(
     return jsonResponse({ ok: true });
   }
 
+  // ===== RIVALS =====
+  if (url === "/api/rivals" && method === "GET") {
+    return jsonResponse(await db.getRivals());
+  }
+  if (url === "/api/rivals" && method === "POST") {
+    return jsonResponse(await db.addRival(body));
+  }
+  if (url.match(/^\/api\/rivals\/(\d+)$/) && method === "PATCH") {
+    const id = parseInt(url.split("/").pop()!);
+    return jsonResponse(await db.updateRival(id, body));
+  }
+  if (url.match(/^\/api\/rivals\/(\d+)$/) && method === "DELETE") {
+    const id = parseInt(url.split("/").pop()!);
+    await db.deleteRival(id);
+    return jsonResponse({ ok: true });
+  }
+
   // ===== SCRYFALL =====
   if (url.startsWith("/api/scryfall/search") && method === "GET") {
     const q = new URLSearchParams(url.split("?")[1]).get("q") || "";

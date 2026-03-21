@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Search, Minus, Plus, Trash2, DollarSign, BookOpen, Import, X } from "lucide-react";
 import ImportDialog from "@/components/ImportDialog";
+import { ManaCost } from "@/components/ManaSymbols";
 import type { CollectionCard } from "@shared/schema";
 
 const colorFilters = [
@@ -345,7 +346,9 @@ function CollectionCardZoom({
             <h2 className="text-xl font-bold">{card.name}</h2>
             <p className="text-sm text-white/60">{card.typeLine}</p>
             {card.manaCost && (
-              <p className="text-sm text-white/50 mt-1">{card.manaCost}</p>
+              <div className="mt-1">
+                <ManaCost cost={card.manaCost} size="md" />
+              </div>
             )}
           </div>
 

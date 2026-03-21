@@ -2,7 +2,7 @@ import { openDB, type IDBPDatabase } from "idb";
 import { SEED_DECKS, type SeedDeck } from "./seed-decks";
 
 const DB_NAME = "mtg-deck-centre";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const SEED_KEY = "mtg-deck-centre-seeded";
 
 interface CollectionCard {
@@ -77,6 +77,19 @@ interface WishlistCard {
   addedDate: string;
 }
 
+export interface Rival {
+  id?: number;
+  playerName: string;
+  deckName: string;
+  commander: string;
+  colors: string;
+  strategy: string;
+  keyThreats: string[];
+  weaknesses: string[];
+  counterTips: string[];
+  notes: string;
+}
+
 let dbPromise: Promise<IDBPDatabase> | null = null;
 
 function getDB() {
@@ -120,6 +133,12 @@ function getDB() {
               autoIncrement: true,
             });
             wl.createIndex("scryfallId", "scryfallId", { unique: false });
+          }
+        }
+        // V3 stores
+        if (oldVersion < 3) {
+          if (!db.objectStoreNames.contains("rivals")) {
+            db.createObjectStore("rivals", { keyPath: "id", autoIncrement: true });
           }
         }
       },
@@ -354,6 +373,36 @@ export async function removeWishlistByScryfallId(scryfallId: string): Promise<vo
   }
 }
 
+// ===== RIVALS =====
+
+export async function getRivals(): Promise<Rival[]> {
+  const db = await getDB();
+  return db.getAll("rivals");
+}
+
+export async function addRival(rival: Omit<Rival, "id">): Promise<Rival> {
+  const db = await getDB();
+  const id = await db.add("rivals", { ...rival });
+  return { ...rival, id: id as number };
+}
+
+export async function updateRival(
+  id: number,
+  data: Partial<Omit<Rival, "id">>
+): Promise<Rival | null> {
+  const db = await getDB();
+  const rival = await db.get("rivals", id);
+  if (!rival) return null;
+  Object.assign(rival, data);
+  await db.put("rivals", rival);
+  return rival;
+}
+
+export async function deleteRival(id: number): Promise<void> {
+  const db = await getDB();
+  await db.delete("rivals", id);
+}
+
 // ===== SCRYFALL (direct client calls) =====
 
 const SCRYFALL_BASE = "https://api.scryfall.com";
@@ -496,6 +545,80 @@ export function initSeedIfNeeded(): Promise<void> {
         console.log(`  ✓ ${seed.name}: ${count} cards imported`);
       } catch (err) {
         console.error(`  ✗ ${seed.name}: failed`, err);
+      }
+    }
+
+    // Seed rival decks
+    console.log("[MTG Deck Centre] Seeding rival deck data...");
+    const seedRivals: Omit<Rival, "id">[] = [
+      {
+        playerName: "Will",
+        deckName: "First Flight",
+        commander: "Isperia, Supreme Judge",
+        colors: "WU",
+        strategy: "Azorius flyers deck. Fills the board with flying creatures and buffs them with anthems like Favorable Winds, True Conviction, and Empyrean Eagle. Isperia draws cards whenever creatures attack you, so the deck generates value through combat. Wins by going wide in the air with evasive threats.",
+        keyThreats: [
+          "Isperia, Supreme Judge — Draws cards when attacked, hard to race",
+          "Sephara, Sky's Blade — 7/7 indestructible flyer, can be cheated out by tapping 4 flyers",
+          "True Conviction — Gives all creatures double strike AND lifelink",
+          "Steel-Plume Marshal — +3/+3 to all flying creatures when attacking",
+          "Storm Herd — Creates tokens equal to life total (can be 40+)",
+        ],
+        weaknesses: [
+          "Weak to board wipes — relies on creature board presence",
+          "No counterspell protection beyond Counterspell and Negate",
+          "Slow to rebuild after a wipe",
+          "No graveyard recursion — what dies stays dead",
+          "Relies on combat damage — pillow fort effects shut it down",
+        ],
+        counterTips: [
+          "Board wipe before they get Sephara out — she has indestructible",
+          "Kill Isperia on sight — card draw engine is the deck's backbone",
+          "Use Blasphemous Act or Chain Reaction (damage-based, hits indestructible too if enough damage)",
+          "Ghostly Prison / Propaganda effects force them to pay for each attacker",
+          "Target anthems (Favorable Winds, Crucible of Fire) with enchantment removal",
+          "Don't attack Will unless you can kill — Isperia punishes attacks",
+        ],
+        notes: "",
+      },
+      {
+        playerName: "Will",
+        deckName: "Fallout: Science!",
+        commander: "Dr. Madison Li",
+        colors: "UG",
+        strategy: "Simic energy/artifact deck. Dr. Madison Li generates energy when casting artifacts, then spends energy to buff creatures, draw cards, or reanimate artifacts. Liberty Prime (backup commander) is an 8/8 with vigilance, trample, haste that needs energy to keep alive. Wins through artifact synergies, energy-fueled card advantage, and big combat damage.",
+        keyThreats: [
+          "Dr. Madison Li — Engine that converts artifacts into energy, then energy into card advantage",
+          "Liberty Prime, Recharged — 8/8 vigilance trample haste, devastating if they have energy to maintain",
+          "Panharmonicon — Doubles all enter-the-battlefield triggers",
+          "Cyberdrive Awakener — Turns all artifacts into 4/4 flyers for a surprise lethal swing",
+          "Kappa Cannoneer — Ward 4, gets bigger with each artifact, practically unremovable",
+        ],
+        weaknesses: [
+          "Energy is a finite resource — if they spend it inefficiently they stall",
+          "Artifact removal cripples them — Vandalblast, Bane of Progress, Collector Ouphe",
+          "Liberty Prime dies if they can't pay 2 energy on attack/block",
+          "Weak to Stony Silence / Null Rod effects that shut off artifacts",
+          "No real board wipes — struggles to recover from a losing board position",
+          "Commander is only a 2/3 — easy to remove repeatedly",
+        ],
+        counterTips: [
+          "Prioritize artifact removal — Vandalblast is devastating, so is Bane of Progress",
+          "Kill Dr. Madison Li early and often — commander tax adds up fast on a 4-mana commander",
+          "If Liberty Prime is out, force them to attack/block to drain energy",
+          "Don't let Panharmonicon stay on the board — double ETB triggers snowball fast",
+          "Save instant-speed removal for Cyberdrive Awakener — that's their surprise kill",
+          "Your Hosts of Mordor deck's Blasphemous Act handles their board well",
+        ],
+        notes: "",
+      },
+    ];
+    for (const rival of seedRivals) {
+      try {
+        await addRival(rival);
+        console.log(`  ✓ Rival: ${rival.playerName} — ${rival.deckName}`);
+      } catch (err) {
+        console.error(`  ✗ Rival: ${rival.playerName} — ${rival.deckName}`, err);
       }
     }
 
