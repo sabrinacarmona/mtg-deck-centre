@@ -186,33 +186,33 @@ function PlayerCard({
       </div>
 
       {/* Life total — BIG */}
-      <div className="p-6 flex items-center justify-center gap-4">
+      <div className="p-4 sm:p-6 flex items-center justify-center gap-2 sm:gap-4">
         <div className="flex gap-1">
           {LIFE_INCREMENTS.reverse().map((inc) => (
             <button
               key={`minus-${inc}`}
-              className="px-2.5 py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold text-sm transition-colors"
+              className="px-2 py-1.5 sm:px-2.5 sm:py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold text-xs sm:text-sm transition-colors"
               onClick={() => onUpdate({ life: player.life - inc })}
             >
               -{inc}
             </button>
           ))}
         </div>
-        <div className="text-center min-w-[80px]">
+        <div className="text-center min-w-[60px] sm:min-w-[80px]">
           <div
-            className={`text-5xl font-mono font-black tracking-tight ${
+            className={`text-4xl sm:text-5xl font-mono font-black tracking-tight ${
               isDead ? "text-red-500" : player.life <= 10 ? "text-amber-500" : "text-foreground"
             }`}
           >
             {player.life}
           </div>
-          <div className="text-xs text-muted-foreground mt-1">Life</div>
+          <div className="text-[10px] sm:text-xs text-muted-foreground mt-1">Life</div>
         </div>
         <div className="flex gap-1">
           {[...LIFE_INCREMENTS].reverse().map((inc) => (
             <button
               key={`plus-${inc}`}
-              className="px-2.5 py-2 rounded-lg bg-green-500/10 hover:bg-green-500/20 text-green-400 font-bold text-sm transition-colors"
+              className="px-2 py-1.5 sm:px-2.5 sm:py-2 rounded-lg bg-green-500/10 hover:bg-green-500/20 text-green-400 font-bold text-xs sm:text-sm transition-colors"
               onClick={() => onUpdate({ life: player.life + inc })}
             >
               +{inc}
@@ -570,19 +570,19 @@ function GamePlaying({
   return (
     <div className="space-y-4">
       {/* Top bar */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Gamepad2 className="w-5 h-5 text-primary" />
-          <h1 className="text-xl font-bold text-primary">Game Night</h1>
+          <h1 className="text-lg sm:text-xl font-bold text-primary">Game Night</h1>
           <span className="text-xs font-mono bg-primary/10 text-primary px-2 py-0.5 rounded">
             Turn {turnCount}
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={onNextTurn}>
+          <Button variant="outline" size="sm" onClick={onNextTurn} className="flex-1 sm:flex-none">
             Next Turn
           </Button>
-          <Button variant="outline" size="sm" onClick={onReset}>
+          <Button variant="outline" size="sm" onClick={onReset} className="flex-1 sm:flex-none">
             <RotateCcw className="w-3.5 h-3.5 mr-1" />
             Reset
           </Button>

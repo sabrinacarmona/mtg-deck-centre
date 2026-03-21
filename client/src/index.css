@@ -283,8 +283,28 @@
 .card-hover {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-.card-hover:hover {
-  transform: translateY(-4px);
+@media (hover: hover) {
+  .card-hover:hover {
+    transform: translateY(-4px);
+  }
+}
+
+/* Mobile bottom nav safe-area */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Slide-up animation for the More sheet */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+.animate-slide-up {
+  animation: slide-up 0.25s ease-out;
 }
 
 /* Smooth scrollbar */

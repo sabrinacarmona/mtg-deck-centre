@@ -369,21 +369,21 @@ function PlayView({
   return (
     <div className="space-y-4">
       {/* Top bar */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Hand className="w-5 h-5 text-primary" />
-          <h1 className="text-xl font-bold text-primary">Goldfishing</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <Hand className="w-5 h-5 text-primary shrink-0" />
+          <h1 className="text-lg sm:text-xl font-bold text-primary">Goldfishing</h1>
           <span className="text-xs font-mono bg-primary/10 text-primary px-2 py-0.5 rounded">
             Turn {turnNumber}
           </span>
-          <span className="text-xs text-muted-foreground">{deckName}</span>
+          <span className="text-xs text-muted-foreground hidden sm:inline">{deckName}</span>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={onDraw} disabled={library.length === 0}>
+          <Button variant="outline" size="sm" onClick={onDraw} disabled={library.length === 0} className="flex-1 sm:flex-none text-xs">
             <ArrowRight className="w-3.5 h-3.5 mr-1" />
-            Draw ({library.length} left)
+            Draw ({library.length})
           </Button>
-          <Button variant="outline" size="sm" onClick={onReset}>
+          <Button variant="outline" size="sm" onClick={onReset} className="flex-1 sm:flex-none text-xs">
             <RotateCcw className="w-3.5 h-3.5 mr-1" />
             New Hand
           </Button>

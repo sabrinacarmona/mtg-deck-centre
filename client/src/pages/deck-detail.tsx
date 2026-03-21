@@ -330,11 +330,11 @@ export default function DeckDetailPage() {
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
           <Button
             variant="secondary"
             size="sm"
-            className="gap-1.5"
+            className="gap-1 h-8 px-2 sm:px-3 text-xs"
             onClick={() => setStatsOpen(!statsOpen)}
             data-testid="toggle-stats-btn"
           >
@@ -345,7 +345,7 @@ export default function DeckDetailPage() {
           <Button
             variant="secondary"
             size="sm"
-            className="gap-1.5"
+            className="gap-1 h-8 px-2 sm:px-3 text-xs"
             onClick={copyToClipboard}
           >
             <Copy className="w-3.5 h-3.5" />
@@ -354,7 +354,7 @@ export default function DeckDetailPage() {
           <Button
             variant="secondary"
             size="sm"
-            className="gap-1.5"
+            className="gap-1 h-8 px-2 sm:px-3 text-xs"
             onClick={downloadTxt}
           >
             <Download className="w-3.5 h-3.5" />
@@ -364,7 +364,7 @@ export default function DeckDetailPage() {
             <Button
               variant="secondary"
               size="sm"
-              className="gap-1.5"
+              className="gap-1 h-8 px-2 sm:px-3 text-xs"
               onClick={() => setGuideOpen(!guideOpen)}
             >
               <BookOpen className="w-3.5 h-3.5" />
@@ -375,7 +375,7 @@ export default function DeckDetailPage() {
           <Button
             variant="secondary"
             size="sm"
-            className="gap-1.5"
+            className="gap-1 h-8 px-2 sm:px-3 text-xs"
             onClick={() => setImportOpen(true)}
             data-testid="import-deck-btn"
           >
@@ -495,7 +495,7 @@ export default function DeckDetailPage() {
       {/* Mobile floating add button */}
       {!mobileSearchOpen && (
         <button
-          className="fixed bottom-6 right-6 lg:hidden w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center z-40"
+          className="fixed bottom-20 md:bottom-6 right-4 md:right-6 lg:hidden w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center z-40"
           onClick={() => setMobileSearchOpen(true)}
         >
           <PlusCircle className="w-6 h-6" />
