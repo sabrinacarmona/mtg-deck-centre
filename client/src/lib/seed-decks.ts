@@ -191,8 +191,10 @@ export const SEED_DECKS: SeedDeck[] = [
 1 Orcish Siegemaster
 1 Rampaging War Mammoth
 1 The Balrog of Moria
+1 Gr\u00edma, Saruman's Footman
 1 In the Darkness Bind Them
 1 Lidless Gaze
+1 Lord of the Nazg\u00fbl
 1 Moria Scavenger
 1 Summons of Saruman
 1 Too Greedily, Too Deep
@@ -214,8 +216,10 @@ export const SEED_DECKS: SeedDeck[] = [
 1 Notion Thief
 1 Treason of Isengard
 1 Bitter Downfall
+1 Troll of Khazad-d\u00fbm
 1 Voracious Fell Beast
 1 Fiery Inscription
+1 Grishn\u00e1kh, Brash Instigator
 1 Arcane Denial
 1 Boon of the Wish-Giver
 1 Consider
