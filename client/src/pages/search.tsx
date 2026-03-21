@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import CardGrid from "@/components/CardGrid";
 import CardDetailDialog from "@/components/CardDetailDialog";
-import { Search, Heart, Sparkles, BookOpen, Layers3, Crown, TrendingUp, DollarSign } from "lucide-react";
+import { Search, Heart, Sparkles, BookOpen, Layers3, Crown, TrendingUp, DollarSign, Swords } from "lucide-react";
 import { Link } from "wouter";
 import type { CollectionCard, DeckCard } from "@shared/schema";
 import {
@@ -397,18 +397,21 @@ function HomeDashboard({ decks }: { decks: Deck[] }) {
         </div>
       </div>
 
-      {/* Your Decks */}
-      {decks.length > 0 && (
+      {/* My Decks */}
+      {decks.filter((d: any) => !d.name.startsWith("Will's")).length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-foreground/80 uppercase tracking-wide">My Decks</h2>
+            <div className="flex items-center gap-2">
+              <Crown className="w-4 h-4 text-primary" />
+              <h2 className="text-sm font-semibold text-foreground/80 uppercase tracking-wide">My Decks</h2>
+            </div>
             <Link href="/decks">
               <button className="text-xs text-primary hover:underline">View All</button>
             </Link>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {decks.filter((d) => !d.name.startsWith("Will's")).slice(0, 4).map((deck) => {
-              const deckIdx = decks.findIndex((d) => d.id === deck.id);
+            {decks.filter((d: any) => !d.name.startsWith("Will's")).slice(0, 4).map((deck: any) => {
+              const deckIdx = decks.findIndex((d: any) => d.id === deck.id);
               const cards = (deckCardsResults[deckIdx]?.data || []) as DeckCard[];
               const artCard = cards.find((c: any) => c.isCommander) || cards[0];
               const artUrl = artCard?.imageNormal || artCard?.imageSmall;
@@ -420,23 +423,62 @@ function HomeDashboard({ decks }: { decks: Deck[] }) {
                     style={{ aspectRatio: "3/4" }}
                   >
                     {artUrl ? (
-                      <img
-                        src={artUrl}
-                        alt={deck.name}
-                        className="absolute inset-0 w-full h-full object-cover object-top"
-                      />
+                      <img src={artUrl} alt={deck.name} className="absolute inset-0 w-full h-full object-cover object-top" />
                     ) : (
                       <div className="absolute inset-0 bg-gradient-to-br from-zinc-800 to-zinc-900" />
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
                     <div className="absolute bottom-0 left-0 right-0 p-3 z-10">
-                      <h3 className="font-bold text-sm text-white drop-shadow-lg leading-tight">
-                        {deck.name}
-                      </h3>
+                      <h3 className="font-bold text-sm text-white drop-shadow-lg leading-tight">{deck.name}</h3>
                       <div className="flex items-center gap-1.5 mt-1">
-                        <span className="text-[9px] bg-white/15 backdrop-blur-sm text-white/80 px-1.5 py-0.5 rounded-full capitalize">
-                          {deck.format}
-                        </span>
+                        <span className="text-[9px] bg-white/15 backdrop-blur-sm text-white/80 px-1.5 py-0.5 rounded-full capitalize">{deck.format}</span>
+                        <span className="text-[9px] text-white/40">{cardCount} cards</span>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Will's Decks */}
+      {decks.filter((d: any) => d.name.startsWith("Will's")).length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <Swords className="w-4 h-4 text-red-400" />
+            <h2 className="text-sm font-semibold text-red-400/80 uppercase tracking-wide">Will's Decks</h2>
+            <span className="text-[10px] text-muted-foreground ml-auto">Know thy enemy</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {decks.filter((d: any) => d.name.startsWith("Will's")).map((deck: any) => {
+              const deckIdx = decks.findIndex((d: any) => d.id === deck.id);
+              const cards = (deckCardsResults[deckIdx]?.data || []) as DeckCard[];
+              const artCard = cards.find((c: any) => c.isCommander) || cards[0];
+              const artUrl = artCard?.imageNormal || artCard?.imageSmall;
+              const cardCount = cards.reduce((s: number, c: any) => s + (c.quantity || 1), 0);
+              const displayName = deck.name.replace("Will's ", "");
+              return (
+                <Link key={deck.id} href={`/decks/${deck.id}`}>
+                  <div
+                    className="relative overflow-hidden rounded-xl cursor-pointer group transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-red-900/20 ring-1 ring-red-500/20"
+                    style={{ aspectRatio: "3/4" }}
+                  >
+                    {artUrl ? (
+                      <img src={artUrl} alt={deck.name} className="absolute inset-0 w-full h-full object-cover object-top saturate-[0.85]" />
+                    ) : (
+                      <div className="absolute inset-0 bg-gradient-to-br from-zinc-800 to-zinc-900" />
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-red-950/90 via-black/20 to-transparent" />
+                    <div className="absolute top-2 left-2 z-10 flex items-center gap-1 bg-red-500/80 backdrop-blur-sm text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+                      <Swords className="w-2.5 h-2.5" />
+                      Rival
+                    </div>
+                    <div className="absolute bottom-0 left-0 right-0 p-3 z-10">
+                      <h3 className="font-bold text-sm text-white drop-shadow-lg leading-tight">{displayName}</h3>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <span className="text-[9px] bg-red-500/20 backdrop-blur-sm text-red-200 px-1.5 py-0.5 rounded-full capitalize">{deck.format}</span>
                         <span className="text-[9px] text-white/40">{cardCount} cards</span>
                       </div>
                     </div>
