@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Crown } from "lucide-react";
+import { Crown, Tag } from "lucide-react";
+import { getTagColor } from "@/hooks/use-tags";
 import type { DeckCard } from "@shared/schema";
 
 interface DeckCardGridProps {
@@ -8,6 +8,9 @@ interface DeckCardGridProps {
   onRemove: (id: number) => void;
   onCardClick: (card: DeckCard) => void;
   deckFormat: string;
+  cardTags?: Record<string, string[]>;
+  onTagClick?: (card: DeckCard) => void;
+  tagFilter?: string | null;
 }
 
 export default function DeckCardGrid({
@@ -16,9 +19,16 @@ export default function DeckCardGrid({
   onRemove,
   onCardClick,
   deckFormat,
+  cardTags = {},
+  onTagClick,
+  tagFilter,
 }: DeckCardGridProps) {
+  const filteredCards = tagFilter
+    ? cards.filter((c) => (cardTags[c.name] || []).includes(tagFilter))
+    : cards;
+
   const grouped: Record<string, DeckCard[]> = {};
-  for (const card of cards) {
+  for (const card of filteredCards) {
     const rawType = card.typeLine.split("—")[0].trim();
     let type = "Other";
     if (rawType.includes("Creature")) type = "Creatures";
@@ -61,6 +71,8 @@ export default function DeckCardGrid({
                 card={card}
                 onCardClick={onCardClick}
                 deckFormat={deckFormat}
+                tags={cardTags[card.name] || []}
+                onTagClick={onTagClick}
               />
             ))}
           </div>
@@ -74,59 +86,92 @@ function DeckCardTile({
   card,
   onCardClick,
   deckFormat,
+  tags,
+  onTagClick,
 }: {
   card: DeckCard;
   onCardClick: (card: DeckCard) => void;
   deckFormat: string;
+  tags: string[];
+  onTagClick?: (card: DeckCard) => void;
 }) {
   const isIllegal = checkIllegal(card, deckFormat);
 
   return (
-    <div
-      className="relative group cursor-pointer"
-      data-testid={`deck-card-${card.id}`}
-      onClick={() => onCardClick(card)}
-    >
-      {card.imageSmall || card.imageNormal ? (
-        <img
-          src={card.imageNormal || card.imageSmall || ""}
-          alt={card.name}
-          className="w-full rounded-lg card-hover"
-          loading="lazy"
-        />
-      ) : (
-        <div className="w-full aspect-[5/7] rounded-lg bg-muted flex items-center justify-center">
-          <span className="text-[10px] text-muted-foreground text-center px-1">
-            {card.name}
-          </span>
-        </div>
-      )}
+    <div className="space-y-1">
+      <div
+        className="relative group cursor-pointer"
+        data-testid={`deck-card-${card.id}`}
+        onClick={() => onCardClick(card)}
+      >
+        {card.imageSmall || card.imageNormal ? (
+          <img
+            src={card.imageNormal || card.imageSmall || ""}
+            alt={card.name}
+            className="w-full rounded-lg card-hover"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full aspect-[5/7] rounded-lg bg-muted flex items-center justify-center">
+            <span className="text-[10px] text-muted-foreground text-center px-1">
+              {card.name}
+            </span>
+          </div>
+        )}
 
-      {(card.quantity || 1) > 1 && (
-        <div className="absolute top-1 left-1 bg-primary text-primary-foreground text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-lg">
-          {card.quantity}
-        </div>
-      )}
+        {(card.quantity || 1) > 1 && (
+          <div className="absolute top-1 left-1 bg-primary text-primary-foreground text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-lg">
+            {card.quantity}
+          </div>
+        )}
 
-      {card.isCommander && (
-        <div className="absolute top-1 right-1 bg-primary text-primary-foreground text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-lg">
-          <Crown className="w-3 h-3" />
-        </div>
-      )}
+        {card.isCommander && (
+          <div className="absolute top-1 right-1 bg-primary text-primary-foreground text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-lg">
+            <Crown className="w-3 h-3" />
+          </div>
+        )}
 
-      {isIllegal && (
-        <div className="absolute bottom-1 right-1 bg-red-500/90 text-white text-[8px] font-bold px-1.5 py-0.5 rounded">
-          !
-        </div>
-      )}
+        {isIllegal && (
+          <div className="absolute bottom-1 right-1 bg-red-500/90 text-white text-[8px] font-bold px-1.5 py-0.5 rounded">
+            !
+          </div>
+        )}
 
-      <div className="absolute inset-0 bg-black/50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-end">
-        <div className="w-full bg-gradient-to-t from-black/80 to-transparent rounded-b-lg px-2 py-1.5">
-          <span className="text-[10px] text-white font-medium leading-tight line-clamp-2">
-            {card.name}
-          </span>
+        {onTagClick && (
+          <button
+            className="absolute bottom-1 left-1 w-5 h-5 rounded-full bg-black/60 hover:bg-primary/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+            onClick={(e) => {
+              e.stopPropagation();
+              onTagClick(card);
+            }}
+            title="Edit tags"
+          >
+            <Tag className="w-2.5 h-2.5 text-white" />
+          </button>
+        )}
+
+        <div className="absolute inset-0 bg-black/50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-end pointer-events-none">
+          <div className="w-full bg-gradient-to-t from-black/80 to-transparent rounded-b-lg px-2 py-1.5">
+            <span className="text-[10px] text-white font-medium leading-tight line-clamp-2">
+              {card.name}
+            </span>
+          </div>
         </div>
       </div>
+
+      {/* Tags below card */}
+      {tags.length > 0 && (
+        <div className="flex flex-wrap gap-0.5 px-0.5">
+          {tags.map((tag) => (
+            <span
+              key={tag}
+              className={`px-1.5 py-0 rounded-full text-[8px] font-medium border ${getTagColor(tag)}`}
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

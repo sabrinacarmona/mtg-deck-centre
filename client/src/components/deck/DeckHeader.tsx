@@ -11,6 +11,7 @@ import {
   Download,
   BookOpen,
   Import,
+  Share2,
 } from "lucide-react";
 import { getDeckGuide } from "@/lib/deck-guides";
 import type { Deck, DeckCard } from "@shared/schema";
@@ -27,6 +28,7 @@ interface DeckHeaderProps {
   onCopy: () => void;
   onExport: () => void;
   onImport: () => void;
+  onShare?: () => void;
 }
 
 export default function DeckHeader({
@@ -41,6 +43,7 @@ export default function DeckHeader({
   onCopy,
   onExport,
   onImport,
+  onShare,
 }: DeckHeaderProps) {
   const totalMain = mainCards.reduce((s, c) => s + (c.quantity || 1), 0);
   const totalSide = sideCards.reduce((s, c) => s + (c.quantity || 1), 0);
@@ -100,6 +103,23 @@ export default function DeckHeader({
           </TooltipTrigger>
           <TooltipContent>View Stats</TooltipContent>
         </Tooltip>
+        {onShare && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="gap-1 h-8 px-2 sm:px-3 text-xs"
+                onClick={onShare}
+                aria-label="Share Deck"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Share</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Share Deck via URL</TooltipContent>
+          </Tooltip>
+        )}
         <Tooltip>
           <TooltipTrigger asChild>
             <Button

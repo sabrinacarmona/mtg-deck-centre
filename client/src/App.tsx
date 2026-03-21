@@ -14,6 +14,7 @@ const SearchPage = lazy(() => import("@/pages/search"));
 const CollectionPage = lazy(() => import("@/pages/collection"));
 const DecksPage = lazy(() => import("@/pages/decks"));
 const DeckDetailPage = lazy(() => import("@/pages/deck-detail"));
+const SharedDeckPage = lazy(() => import("@/pages/shared-deck"));
 const ScannerPage = lazy(() => import("@/pages/scanner"));
 const ComparePage = lazy(() => import("@/pages/compare"));
 const WishlistPage = lazy(() => import("@/pages/wishlist"));
@@ -33,6 +34,7 @@ function AppRouter() {
           <Route path="/collection" component={CollectionPage} />
           <Route path="/decks" component={DecksPage} />
           <Route path="/decks/:id" component={DeckDetailPage} />
+          <Route path="/shared/:data" component={SharedDeckPage} />
           <Route path="/compare" component={ComparePage} />
           <Route path="/wishlist" component={WishlistPage} />
           <Route path="/learn" component={LearnPage} />
