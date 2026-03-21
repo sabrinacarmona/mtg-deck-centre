@@ -528,6 +528,19 @@ async function seedOneDeck(seed: SeedDeck): Promise<number> {
 
 let seedPromise: Promise<void> | null = null;
 
+export type SeedProgress = {
+  current: number;
+  total: number;
+  deckName: string;
+  phase: "decks" | "rivals" | "done";
+};
+
+let seedProgressCallback: ((p: SeedProgress) => void) | null = null;
+
+export function onSeedProgress(cb: (p: SeedProgress) => void) {
+  seedProgressCallback = cb;
+}
+
 export function initSeedIfNeeded(): Promise<void> {
   if (seedPromise) return seedPromise;
 
@@ -537,9 +550,12 @@ export function initSeedIfNeeded(): Promise<void> {
     const existingDecks = await getDecks();
     if (existingDecks.length > 0) return;
 
-    console.log("[MTG Deck Centre] First load — seeding 4 precon decks from Scryfall...");
+    console.log("[Sabrina's Vault] First load — seeding decks from Scryfall...");
+    const total = SEED_DECKS.length;
 
-    for (const seed of SEED_DECKS) {
+    for (let i = 0; i < SEED_DECKS.length; i++) {
+      const seed = SEED_DECKS[i];
+      seedProgressCallback?.({ current: i + 1, total, deckName: seed.name, phase: "decks" });
       try {
         const count = await seedOneDeck(seed);
         console.log(`  ✓ ${seed.name}: ${count} cards imported`);
@@ -549,7 +565,8 @@ export function initSeedIfNeeded(): Promise<void> {
     }
 
     // Seed rival decks
-    console.log("[MTG Deck Centre] Seeding rival deck data...");
+    seedProgressCallback?.({ current: total, total, deckName: "Rival data", phase: "rivals" });
+    console.log("[Sabrina's Vault] Seeding rival deck data...");
     const seedRivals: Omit<Rival, "id">[] = [
       {
         playerName: "Will",
