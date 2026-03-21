@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useQueries, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import CardGrid from "@/components/CardGrid";
 import CardDetailDialog from "@/components/CardDetailDialog";
-import { Search, Heart, Sparkles } from "lucide-react";
+import { Search, Heart, Sparkles, BookOpen, Layers3, Crown, TrendingUp, DollarSign } from "lucide-react";
+import { Link } from "wouter";
+import type { CollectionCard, DeckCard } from "@shared/schema";
 import {
   Popover,
   PopoverContent,
@@ -57,6 +59,10 @@ export default function SearchPage() {
 
   const { data: wishlistCards = [] } = useQuery<WishlistCard[]>({
     queryKey: ["/api/wishlist"],
+  });
+
+  const { data: collectionCards = [] } = useQuery<CollectionCard[]>({
+    queryKey: ["/api/collection"],
   });
 
   const wishlistIds = new Set(wishlistCards.map((w) => w.scryfallId));
@@ -219,18 +225,7 @@ export default function SearchPage() {
         </div>
       )}
 
-      {!query && (
-        <div className="text-center py-16">
-          <div className="w-16 h-16 mx-auto rounded-full bg-primary/15 flex items-center justify-center mb-4">
-            <Sparkles className="w-8 h-8 text-primary" />
-          </div>
-          <h2 className="text-lg font-semibold mb-1">Search the Multiverse</h2>
-          <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-            Type a card name, type, or keyword to search the entire Magic: The
-            Gathering catalog via Scryfall.
-          </p>
-        </div>
-      )}
+      {!query && <HomeDashboard decks={decks} />}
 
       {/* Card detail dialog */}
       <CardDetailDialog
@@ -351,6 +346,125 @@ function SearchCardItem({
           >
             <Heart className={`w-3.5 h-3.5 ${isWishlisted ? "fill-current" : ""}`} />
           </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Home dashboard shown when search is empty */
+function HomeDashboard({ decks }: { decks: Deck[] }) {
+  const { data: collectionCards = [] } = useQuery<any[]>({
+    queryKey: ["/api/collection"],
+  });
+
+  // Fetch cards for each deck to get art + stats
+  const deckCardsResults = useQueries({
+    queries: decks.map((deck) => ({
+      queryKey: ["/api/decks", deck.id, "cards"],
+      queryFn: async () => {
+        const res = await apiRequest("GET", `/api/decks/${deck.id}/cards`);
+        return res.json() as Promise<DeckCard[]>;
+      },
+      enabled: !!deck.id,
+    })),
+  });
+
+  const totalCards = collectionCards.reduce((s: number, c: any) => s + (c.quantity || 1), 0);
+  const uniqueCards = collectionCards.length;
+  const totalValue = collectionCards.reduce((s: number, c: any) => {
+    return s + parseFloat(c.priceUsd || "0") * (c.quantity || 1);
+  }, 0);
+
+  return (
+    <div className="space-y-6 pt-2">
+      {/* Welcome + stats row */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="card-frame rounded-xl p-4 text-center">
+          <BookOpen className="w-5 h-5 mx-auto mb-1.5 text-primary/70" />
+          <div className="text-2xl font-bold">{totalCards}</div>
+          <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Total Cards</div>
+        </div>
+        <div className="card-frame rounded-xl p-4 text-center">
+          <Layers3 className="w-5 h-5 mx-auto mb-1.5 text-primary/70" />
+          <div className="text-2xl font-bold">{decks.length}</div>
+          <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Decks</div>
+        </div>
+        <div className="card-frame rounded-xl p-4 text-center">
+          <DollarSign className="w-5 h-5 mx-auto mb-1.5 text-primary/70" />
+          <div className="text-2xl font-bold text-primary">${totalValue.toFixed(0)}</div>
+          <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Est. Value</div>
+        </div>
+      </div>
+
+      {/* Your Decks */}
+      {decks.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-foreground/80 uppercase tracking-wide">Your Decks</h2>
+            <Link href="/decks">
+              <button className="text-xs text-primary hover:underline">View All</button>
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {decks.slice(0, 4).map((deck, i) => {
+              const cards = (deckCardsResults[i]?.data || []) as DeckCard[];
+              const artCard = cards.find((c: any) => c.isCommander) || cards[0];
+              const artUrl = artCard?.imageNormal || artCard?.imageSmall;
+              const cardCount = cards.reduce((s: number, c: any) => s + (c.quantity || 1), 0);
+              return (
+                <Link key={deck.id} href={`/decks/${deck.id}`}>
+                  <div
+                    className="relative overflow-hidden rounded-xl cursor-pointer group transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-black/30"
+                    style={{ aspectRatio: "3/4" }}
+                  >
+                    {artUrl ? (
+                      <img
+                        src={artUrl}
+                        alt={deck.name}
+                        className="absolute inset-0 w-full h-full object-cover object-top"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 bg-gradient-to-br from-zinc-800 to-zinc-900" />
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 p-3 z-10">
+                      <h3 className="font-bold text-sm text-white drop-shadow-lg leading-tight">
+                        {deck.name}
+                      </h3>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <span className="text-[9px] bg-white/15 backdrop-blur-sm text-white/80 px-1.5 py-0.5 rounded-full capitalize">
+                          {deck.format}
+                        </span>
+                        <span className="text-[9px] text-white/40">{cardCount} cards</span>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Quick actions */}
+      <div className="text-center pt-2">
+        <p className="text-xs text-muted-foreground mb-3">
+          Search 27,000+ cards above, or explore your collection
+        </p>
+        <div className="flex items-center justify-center gap-2">
+          <Link href="/collection">
+            <Button variant="secondary" size="sm" className="gap-1.5 text-xs">
+              <BookOpen className="w-3.5 h-3.5" />
+              Collection
+            </Button>
+          </Link>
+          <Link href="/scanner">
+            <Button variant="secondary" size="sm" className="gap-1.5 text-xs">
+              <Search className="w-3.5 h-3.5" />
+              Scan Card
+            </Button>
+          </Link>
         </div>
       </div>
     </div>
