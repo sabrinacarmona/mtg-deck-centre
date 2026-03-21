@@ -401,14 +401,15 @@ function HomeDashboard({ decks }: { decks: Deck[] }) {
       {decks.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-foreground/80 uppercase tracking-wide">Your Decks</h2>
+            <h2 className="text-sm font-semibold text-foreground/80 uppercase tracking-wide">My Decks</h2>
             <Link href="/decks">
               <button className="text-xs text-primary hover:underline">View All</button>
             </Link>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {decks.slice(0, 4).map((deck, i) => {
-              const cards = (deckCardsResults[i]?.data || []) as DeckCard[];
+            {decks.filter((d) => !d.name.startsWith("Will's")).slice(0, 4).map((deck) => {
+              const deckIdx = decks.findIndex((d) => d.id === deck.id);
+              const cards = (deckCardsResults[deckIdx]?.data || []) as DeckCard[];
               const artCard = cards.find((c: any) => c.isCommander) || cards[0];
               const artUrl = artCard?.imageNormal || artCard?.imageSmall;
               const cardCount = cards.reduce((s: number, c: any) => s + (c.quantity || 1), 0);

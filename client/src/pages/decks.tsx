@@ -19,7 +19,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Layers3, Trash2, Crown, GitCompare } from "lucide-react";
+import { Plus, Layers3, Trash2, Crown, GitCompare, Swords } from "lucide-react";
 import type { Deck, DeckCard } from "@shared/schema";
 
 const formats = [
@@ -164,79 +164,122 @@ export default function DecksPage() {
         </div>
       )}
 
-      {/* Deck grid */}
-      {!isLoading && deckList.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {deckList.map((deck) => {
-            const cards = deckCardsMap.get(deck.id) || [];
-            const commander = cards.find((c) => c.isCommander);
-            const artCard = commander || cards[0];
-            const artUrl = artCard?.imageNormal || artCard?.imageSmall;
-            const totalCards = cards.reduce((s, c) => s + (c.quantity || 1), 0);
-            return (
-              <Link key={deck.id} href={`/decks/${deck.id}`}>
-                <div
-                  className="relative overflow-hidden rounded-xl cursor-pointer group transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/40"
-                  style={{ aspectRatio: "4/3" }}
-                  data-testid={`deck-card-${deck.id}`}
+      {/* Deck grid — separated by owner */}
+      {!isLoading && deckList.length > 0 && (() => {
+        const myDecks = deckList.filter((d) => !d.name.startsWith("Will's"));
+        const willDecks = deckList.filter((d) => d.name.startsWith("Will's"));
+
+        const renderDeckCard = (deck: Deck, isRival = false) => {
+          const cards = deckCardsMap.get(deck.id) || [];
+          const commander = cards.find((c) => c.isCommander);
+          const artCard = commander || cards[0];
+          const artUrl = artCard?.imageNormal || artCard?.imageSmall;
+          const totalCards = cards.reduce((s, c) => s + (c.quantity || 1), 0);
+          const displayName = isRival ? deck.name.replace("Will's ", "") : deck.name;
+          return (
+            <Link key={deck.id} href={`/decks/${deck.id}`}>
+              <div
+                className={`relative overflow-hidden rounded-xl cursor-pointer group transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${isRival ? "hover:shadow-red-900/30 ring-1 ring-red-500/20" : "hover:shadow-black/40"}`}
+                style={{ aspectRatio: "4/3" }}
+                data-testid={`deck-card-${deck.id}`}
+              >
+                {/* Art background */}
+                {artUrl ? (
+                  <img
+                    src={artUrl}
+                    alt={deck.name}
+                    className={`absolute inset-0 w-full h-full object-cover object-top ${isRival ? "saturate-[0.85]" : ""}`}
+                  />
+                ) : (
+                  <div className="absolute inset-0 bg-gradient-to-br from-zinc-800 to-zinc-900" />
+                )}
+
+                {/* Gradient overlay */}
+                <div className={`absolute inset-0 bg-gradient-to-t ${isRival ? "from-red-950/90 via-black/30 to-transparent" : "from-black/90 via-black/30 to-transparent"}`} />
+
+                {/* Rival badge */}
+                {isRival && (
+                  <div className="absolute top-2 left-2 z-10 flex items-center gap-1 bg-red-500/80 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                    <Swords className="w-2.5 h-2.5" />
+                    Rival
+                  </div>
+                )}
+
+                {/* Delete button */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-2 right-2 w-7 h-7 opacity-0 group-hover:opacity-100 transition-opacity text-white/60 hover:text-red-400 hover:bg-black/40 z-10"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    deleteDeck.mutate(deck.id);
+                  }}
+                  data-testid={`delete-deck-${deck.id}`}
                 >
-                  {/* Art background — full visibility */}
-                  {artUrl ? (
-                    <img
-                      src={artUrl}
-                      alt={deck.name}
-                      className="absolute inset-0 w-full h-full object-cover object-top"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 bg-gradient-to-br from-zinc-800 to-zinc-900" />
-                  )}
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
 
-                  {/* Gradient overlay — heavier at bottom for text */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-
-                  {/* Delete button */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute top-2 right-2 w-7 h-7 opacity-0 group-hover:opacity-100 transition-opacity text-white/60 hover:text-red-400 hover:bg-black/40 z-10"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      deleteDeck.mutate(deck.id);
-                    }}
-                    data-testid={`delete-deck-${deck.id}`}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
-
-                  {/* Content at bottom */}
-                  <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
-                    <h3 className="font-bold text-base text-white drop-shadow-lg">
-                      {deck.name}
-                    </h3>
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <span className="text-[10px] bg-white/15 backdrop-blur-sm text-white/90 px-2 py-0.5 rounded-full capitalize font-medium">
-                        {deck.format}
-                      </span>
-                      <span className="text-[10px] text-white/50">
-                        {totalCards} cards
+                {/* Content at bottom */}
+                <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
+                  <h3 className="font-bold text-base text-white drop-shadow-lg">
+                    {displayName}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <span className={`text-[10px] backdrop-blur-sm px-2 py-0.5 rounded-full capitalize font-medium ${isRival ? "bg-red-500/20 text-red-200" : "bg-white/15 text-white/90"}`}>
+                      {deck.format}
+                    </span>
+                    <span className="text-[10px] text-white/50">
+                      {totalCards} cards
+                    </span>
+                  </div>
+                  {(commander || artCard) && (
+                    <div className="flex items-center gap-1.5 mt-2 text-[11px] text-white/70">
+                      <Crown className={`w-3 h-3 ${isRival ? "text-red-400/80" : "text-amber-400/80"}`} />
+                      <span className="truncate">
+                        {(commander || artCard)?.name}
                       </span>
                     </div>
-                    {(commander || artCard) && (
-                      <div className="flex items-center gap-1.5 mt-2 text-[11px] text-white/70">
-                        <Crown className="w-3 h-3 text-amber-400/80" />
-                        <span className="truncate">
-                          {(commander || artCard)?.name}
-                        </span>
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
-              </Link>
-            );
-          })}
-        </div>
-      )}
+              </div>
+            </Link>
+          );
+        };
+
+        return (
+          <div className="space-y-8">
+            {/* My Decks */}
+            {myDecks.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Crown className="w-4 h-4 text-primary" />
+                  <h2 className="text-sm font-semibold text-foreground/80 uppercase tracking-wide">My Decks</h2>
+                  <span className="text-xs text-muted-foreground">{myDecks.length}</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {myDecks.map((deck) => renderDeckCard(deck, false))}
+                </div>
+              </div>
+            )}
+
+            {/* Will's Decks */}
+            {willDecks.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Swords className="w-4 h-4 text-red-400" />
+                  <h2 className="text-sm font-semibold text-red-400/80 uppercase tracking-wide">Will's Decks</h2>
+                  <span className="text-xs text-red-400/50">{willDecks.length}</span>
+                  <span className="text-[10px] text-muted-foreground ml-auto">Know thy enemy</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {willDecks.map((deck) => renderDeckCard(deck, true))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Empty state */}
       {!isLoading && deckList.length === 0 && (
