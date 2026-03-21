@@ -370,9 +370,16 @@ function HomeDashboard({ decks }: { decks: Deck[] }) {
     })),
   });
 
-  const totalCards = collectionCards.reduce((s: number, c: any) => s + (c.quantity || 1), 0);
-  const uniqueCards = collectionCards.length;
-  const totalValue = collectionCards.reduce((s: number, c: any) => {
+  // Only count Sabrina's decks for stats
+  const myDecks = decks.filter((d: any) => !d.name.startsWith("Will's"));
+  const myDeckIds = new Set(myDecks.map((d: any) => d.id));
+
+  // Get card counts only for Sabrina's decks
+  const myDeckCards = deckCardsResults
+    .filter((_, i) => myDeckIds.has(decks[i]?.id))
+    .flatMap((r) => (r.data || []) as DeckCard[]);
+  const totalCards = myDeckCards.reduce((s: number, c: any) => s + (c.quantity || 1), 0);
+  const totalValue = myDeckCards.reduce((s: number, c: any) => {
     return s + parseFloat(c.priceUsd || "0") * (c.quantity || 1);
   }, 0);
 
@@ -387,7 +394,7 @@ function HomeDashboard({ decks }: { decks: Deck[] }) {
         </div>
         <div className="card-frame rounded-xl p-4 text-center">
           <Layers3 className="w-5 h-5 mx-auto mb-1.5 text-primary/70" />
-          <div className="text-2xl font-bold">{decks.length}</div>
+          <div className="text-2xl font-bold">{myDecks.length}</div>
           <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Decks</div>
         </div>
         <div className="card-frame rounded-xl p-4 text-center">
