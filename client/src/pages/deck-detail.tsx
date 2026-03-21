@@ -20,6 +20,7 @@ import {
   ChevronDown,
   ChevronUp,
   BarChart3,
+  X,
 } from "lucide-react";
 import ImportDialog from "@/components/ImportDialog";
 import type { Deck, DeckCard, ScryfallCard } from "@shared/schema";
@@ -32,6 +33,7 @@ export default function DeckDetailPage() {
   const [board, setBoard] = useState<"main" | "side">("main");
   const [importOpen, setImportOpen] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
+  const [zoomedCard, setZoomedCard] = useState<DeckCard | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -265,6 +267,7 @@ export default function DeckDetailPage() {
               cards={activeCards}
               onUpdateQuantity={(id, qty) => updateQuantity.mutate({ id, quantity: qty })}
               onRemove={(id) => removeCard.mutate(id)}
+              onCardClick={(card) => setZoomedCard(card)}
             />
           )}
         </div>
@@ -306,6 +309,21 @@ export default function DeckDetailPage() {
         deckId={deckId}
         board={board}
       />
+
+      {/* Zoomed card overlay */}
+      {zoomedCard && (
+        <CardZoomOverlay
+          card={zoomedCard}
+          onClose={() => setZoomedCard(null)}
+          onUpdateQuantity={(id, qty) => {
+            updateQuantity.mutate({ id, quantity: qty });
+          }}
+          onRemove={(id) => {
+            removeCard.mutate(id);
+            setZoomedCard(null);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -315,10 +333,12 @@ function DeckVisualGrid({
   cards,
   onUpdateQuantity,
   onRemove,
+  onCardClick,
 }: {
   cards: DeckCard[];
   onUpdateQuantity: (id: number, qty: number) => void;
   onRemove: (id: number) => void;
+  onCardClick: (card: DeckCard) => void;
 }) {
   // Group by type category
   const grouped: Record<string, DeckCard[]> = {};
@@ -365,6 +385,7 @@ function DeckVisualGrid({
                 card={card}
                 onUpdateQuantity={onUpdateQuantity}
                 onRemove={onRemove}
+                onCardClick={onCardClick}
               />
             ))}
           </div>
@@ -379,15 +400,18 @@ function DeckCardTile({
   card,
   onUpdateQuantity,
   onRemove,
+  onCardClick,
 }: {
   card: DeckCard;
   onUpdateQuantity: (id: number, qty: number) => void;
   onRemove: (id: number) => void;
+  onCardClick: (card: DeckCard) => void;
 }) {
   return (
     <div
-      className="relative group cursor-default"
+      className="relative group cursor-pointer"
       data-testid={`deck-card-${card.id}`}
+      onClick={() => onCardClick(card)}
     >
       {/* Card image */}
       {card.imageSmall || card.imageNormal ? (
@@ -412,33 +436,120 @@ function DeckCardTile({
         </div>
       )}
 
-      {/* Hover overlay with controls */}
-      <div className="absolute inset-0 bg-black/70 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5">
-        <span className="text-[10px] text-white font-medium text-center px-2 leading-tight">
-          {card.name}
-        </span>
-        <div className="flex items-center gap-1">
-          <button
-            className="w-6 h-6 rounded bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors"
-            onClick={() => onUpdateQuantity(card.id, (card.quantity || 1) - 1)}
-          >
-            <Minus className="w-3 h-3" />
-          </button>
-          <span className="text-white text-xs font-bold w-5 text-center">
-            {card.quantity || 1}
+      {/* Hover overlay — name only, click to zoom */}
+      <div className="absolute inset-0 bg-black/50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-end">
+        <div className="w-full bg-gradient-to-t from-black/80 to-transparent rounded-b-lg px-2 py-1.5">
+          <span className="text-[10px] text-white font-medium leading-tight line-clamp-2">
+            {card.name}
           </span>
-          <button
-            className="w-6 h-6 rounded bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors"
-            onClick={() => onUpdateQuantity(card.id, (card.quantity || 1) + 1)}
-          >
-            <Plus className="w-3 h-3" />
-          </button>
-          <button
-            className="w-6 h-6 rounded bg-red-500/40 hover:bg-red-500/60 flex items-center justify-center text-white transition-colors ml-1"
-            onClick={() => onRemove(card.id)}
-          >
-            <Trash2 className="w-3 h-3" />
-          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Full-screen card zoom overlay with large image and controls */
+function CardZoomOverlay({
+  card,
+  onClose,
+  onUpdateQuantity,
+  onRemove,
+}: {
+  card: DeckCard;
+  onClose: () => void;
+  onUpdateQuantity: (id: number, qty: number) => void;
+  onRemove: (id: number) => void;
+}) {
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  const image = card.imageNormal || card.imageSmall;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      onClick={onClose}
+      data-testid="card-zoom-overlay"
+    >
+      <div
+        className="relative flex flex-col sm:flex-row items-center gap-6 max-w-3xl w-full px-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close button */}
+        <button
+          className="absolute -top-2 -right-2 sm:top-0 sm:right-0 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors z-10"
+          onClick={onClose}
+          data-testid="card-zoom-close"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
+        {/* Large card image */}
+        {image ? (
+          <img
+            src={image}
+            alt={card.name}
+            className="rounded-2xl shadow-2xl max-h-[75vh] w-auto"
+            data-testid="card-zoom-image"
+          />
+        ) : (
+          <div className="bg-muted rounded-2xl w-[300px] aspect-[5/7] flex items-center justify-center">
+            <span className="text-muted-foreground">{card.name}</span>
+          </div>
+        )}
+
+        {/* Card info + controls */}
+        <div className="flex flex-col items-center sm:items-start gap-4 text-white">
+          <div>
+            <h2 className="text-xl font-bold">{card.name}</h2>
+            <p className="text-sm text-white/60">{card.typeLine}</p>
+            {card.manaCost && (
+              <p className="text-sm text-white/50 mt-1">{card.manaCost}</p>
+            )}
+          </div>
+
+          {card.oracleText && (
+            <p className="text-sm text-white/80 whitespace-pre-wrap leading-relaxed max-w-xs">
+              {card.oracleText}
+            </p>
+          )}
+
+          {card.power && card.toughness && (
+            <p className="text-sm font-semibold text-white/70">
+              {card.power}/{card.toughness}
+            </p>
+          )}
+
+          {/* Quantity controls */}
+          <div className="flex items-center gap-2 mt-2">
+            <button
+              className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+              onClick={() => onUpdateQuantity(card.id, (card.quantity || 1) - 1)}
+            >
+              <Minus className="w-4 h-4" />
+            </button>
+            <span className="text-lg font-bold w-8 text-center">
+              {card.quantity || 1}x
+            </span>
+            <button
+              className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+              onClick={() => onUpdateQuantity(card.id, (card.quantity || 1) + 1)}
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+            <button
+              className="w-8 h-8 rounded-lg bg-red-500/30 hover:bg-red-500/50 flex items-center justify-center text-white transition-colors ml-2"
+              onClick={() => onRemove(card.id)}
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
     </div>
