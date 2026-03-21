@@ -359,4 +359,174 @@ export const SEED_DECKS: SeedDeck[] = [
 5 Island
 5 Mountain`,
   },
+  {
+    name: "Will's First Flight",
+    format: "commander",
+    decklist: `1 Isperia, Supreme Judge
+1 Archon of Redemption
+1 Cartographer's Hawk
+1 Cleansing Nova
+1 Emeria Angel
+1 Gideon Jura
+1 Hanged Executioner
+1 Remorseful Cleric
+1 Sephara, Sky's Blade
+1 Steel-Plume Marshal
+1 Storm Herd
+1 True Conviction
+1 Angler Turtle
+1 Bident of Thassa
+1 Diluvian Primordial
+1 Ever-Watching Threshold
+1 Faerie Formation
+1 Gravitational Shift
+1 Inspired Sphinx
+1 Sharding Sphinx
+1 Sphinx of Enlightenment
+1 Windreader Sphinx
+1 Absorb
+1 Skycat Sovereign
+1 Sphinx's Revelation
+1 Time Wipe
+1 Moorland Haunt
+1 Port Town
+1 Prairie Stream
+1 Temple of Enlightenment
+1 Aven Gagglemaster
+1 Banishing Light
+1 Condemn
+1 Crush Contraband
+1 Disenchant
+1 Generous Gift
+1 Kangee's Lieutenant
+1 Rally of Wings
+1 Soul Snare
+1 Swords to Plowshares
+1 Vow of Duty
+1 Aetherize
+1 Counterspell
+1 Favorable Winds
+1 Negate
+1 Tide Skimmer
+1 Warden of Evos Isle
+1 Winged Words
+1 Cloudblazer
+1 Empyrean Eagle
+1 Jubilant Skybonder
+1 Kangee, Sky Warden
+1 Migratory Route
+1 Staggering Insight
+1 Thunderclap Wyvern
+1 Arcane Signet
+1 Azorius Signet
+1 Commander's Sphere
+1 Hedron Archive
+1 Pilgrim's Eye
+1 Sky Diamond
+1 Skyscanner
+1 Sol Ring
+1 Talisman of Progress
+1 Thought Vessel
+1 Coastal Tower
+1 Command Tower
+1 Meandering River
+1 Sejiri Refuge
+1 Tranquil Cove
+15 Plains
+15 Island`,
+  },
+  {
+    name: "Will's Fallout: Science!",
+    format: "commander",
+    decklist: `1 Dr. Madison Li
+1 Arcade Gannon
+1 Assaultron Dominator
+1 Behemoth of Vault 0
+1 Brotherhood Scribe
+1 Curie, Emergent Intelligence
+1 Elder Owyn Lyons
+1 Liberty Prime, Recharged
+1 Loyal Apprentice
+1 Nick Valentine, Private Eye
+1 Paladin Danse, Steel Maverick
+1 Red Death, Shipwrecker
+1 Rex, Cyber-Hound
+1 Robobrain War Mind
+1 Sentinel Sarah Lyons
+1 Sentry Bot
+1 Shaun, Father of Synths
+1 Solemn Simulacrum
+1 Steel Overseer
+1 Synth Eradicator
+1 Synth Infiltrator
+1 The Motherlode, Excavator
+1 Whirler Rogue
+1 Bottle-Cap Blast
+1 Crush Contraband
+1 Dispatch
+1 Electrosiphon
+1 Glimmer of Genius
+1 Swords to Plowshares
+1 Thirst for Knowledge
+1 Unexpected Windfall
+1 Arcane Signet
+1 Automated Assembly Line
+1 Brotherhood Vertibird
+1 Endurance Bobblehead
+1 Everflowing Chalice
+1 Expert-Level Safe
+1 Intelligence Bobblehead
+1 Lightning Greaves
+1 Mind Stone
+1 Mystic Forge
+1 Nuka-Cola Vending Machine
+1 Panharmonicon
+1 Plasma Caster
+1 Sol Ring
+1 T-45 Power Armor
+1 Talisman of Conviction
+1 Talisman of Creativity
+1 Talisman of Progress
+1 The Prydwen, Steel Flagship
+1 Thought Vessel
+1 Wayfarer's Bauble
+1 Mechanized Production
+1 Nerd Rage
+1 Overencumbered
+1 Vault 112: Sadistic Simulation
+1 Vault 13: Dweller\u0027s Journey
+1 Austere Command
+1 One with the Machine
+1 Open the Vaults
+1 Wake the Past
+1 James, Wandering Dad
+1 C.A.M.P.
+1 HELIOS One
+1 Ash Barrens
+1 Buried Ruin
+1 Clifftop Retreat
+1 Command Tower
+1 Evolving Wilds
+1 Exotic Orchard
+1 Ferrous Lake
+1 Glacial Fortress
+1 Irrigated Farmland
+1 Myriad Landscape
+1 Mystic Monastery
+1 Path of Ancestry
+1 Prairie Stream
+1 Razortide Bridge
+1 Rustvale Bridge
+1 Silverbluff Bridge
+1 Skycloud Expanse
+1 Spire of Industry
+1 Sulfur Falls
+1 Temple of Enlightenment
+1 Temple of Epiphany
+1 Terramorphic Expanse
+1 Treasure Vault
+5 Island
+4 Mountain
+4 Plains`,
+  },
 ];
