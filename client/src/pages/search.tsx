@@ -22,6 +22,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { Link } from "wouter";
+import { ManaCost, OracleText } from "@/components/ManaSymbols";
 import type { CollectionCard, DeckCard } from "@shared/schema";
 import {
   Popover,
@@ -247,6 +248,8 @@ export default function SearchPage() {
         open={detailOpen}
         onOpenChange={setDetailOpen}
         onAddToCollection={(card) => addToCollection.mutate(card)}
+        onToggleWishlist={(card) => toggleWishlist.mutate(card)}
+        isWishlisted={selectedCard ? wishlistIds.has(selectedCard.id) : false}
       />
     </div>
   );
@@ -394,17 +397,12 @@ function HomeDashboard({ decks }: { decks: Deck[] }) {
     })),
   });
 
-  // Only count Sabrina's decks for stats
   const myDecks = decks.filter((d: any) => !d.name.startsWith("Will's"));
-  const myDeckIds = new Set(myDecks.map((d: any) => d.id));
   const willsDecks = decks.filter((d: any) => d.name.startsWith("Will's"));
 
-  // Get card counts only for Sabrina's decks
-  const myDeckCards = deckCardsResults
-    .filter((_, i) => myDeckIds.has(decks[i]?.id))
-    .flatMap((r) => (r.data || []) as DeckCard[]);
-  const totalCards = myDeckCards.reduce((s: number, c: any) => s + (c.quantity || 1), 0);
-  const totalValue = myDeckCards.reduce((s: number, c: any) => {
+  // Use collection cards for stats (same source as collection page)
+  const totalCards = collectionCards.reduce((s: number, c: any) => s + (c.quantity || 1), 0);
+  const totalValue = collectionCards.reduce((s: number, c: any) => {
     return s + parseFloat(c.priceUsd || "0") * (c.quantity || 1);
   }, 0);
 
@@ -413,8 +411,8 @@ function HomeDashboard({ decks }: { decks: Deck[] }) {
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-3 stagger-children">
         <StatCard icon={BookOpen} label="Total Cards" value={totalCards.toString()} />
-        <StatCard icon={Layers3} label="Decks" value={myDecks.length.toString()} />
-        <StatCard icon={DollarSign} label="Est. Value" value={`$${totalValue.toFixed(0)}`} accent />
+        <StatCard icon={Layers3} label="Unique" value={collectionCards.length.toString()} />
+        <StatCard icon={DollarSign} label="Est. Value" value={`$${totalValue.toFixed(2)}`} accent />
       </div>
 
       {/* Card of the Day */}
@@ -447,14 +445,19 @@ function HomeDashboard({ decks }: { decks: Deck[] }) {
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-display font-bold text-base text-foreground leading-tight">
-                {randomCard.name}
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-display font-bold text-base text-foreground leading-tight">
+                  {randomCard.name}
+                </h3>
+                {randomCard.mana_cost && (
+                  <ManaCost cost={randomCard.mana_cost} size="sm" />
+                )}
+              </div>
               <p className="text-xs text-muted-foreground mt-0.5">{randomCard.type_line}</p>
               {randomCard.oracle_text && (
-                <p className="text-xs text-foreground/70 mt-2 line-clamp-3 leading-relaxed">
-                  {randomCard.oracle_text}
-                </p>
+                <div className="text-xs text-foreground/70 mt-2 line-clamp-3 leading-relaxed">
+                  <OracleText text={randomCard.oracle_text} size="sm" />
+                </div>
               )}
               <div className="flex items-center gap-3 mt-3">
                 {randomCard.prices?.usd && (

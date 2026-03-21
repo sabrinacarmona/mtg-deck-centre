@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import ManaCurve from "@/components/ManaCurve";
-import { ManaCost } from "@/components/ManaSymbols";
+import { ManaCost, OracleText } from "@/components/ManaSymbols";
 import ColorDistribution from "@/components/ColorDistribution";
 import CardGrid from "@/components/CardGrid";
 import {
@@ -909,9 +909,14 @@ function CardZoomOverlay({
           </div>
 
           {card.oracleText && (
-            <p className="text-sm text-white/80 whitespace-pre-wrap leading-relaxed max-w-xs">
-              {card.oracleText}
-            </p>
+            <div className="text-sm text-white/80 leading-relaxed max-w-xs">
+              {card.oracleText.split("\n").map((line, i) => (
+                <span key={i}>
+                  {i > 0 && <br />}
+                  <OracleText text={line} size="sm" />
+                </span>
+              ))}
+            </div>
           )}
 
           {/* Card tip */}

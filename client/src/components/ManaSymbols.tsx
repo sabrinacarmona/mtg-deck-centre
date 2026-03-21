@@ -58,3 +58,40 @@ export function ManaCost({
     </span>
   );
 }
+
+/** Render oracle text with inline mana symbols for {X} patterns. */
+export function OracleText({
+  text,
+  size = "sm",
+  className = "",
+}: {
+  text: string;
+  size?: "sm" | "md" | "lg";
+  className?: string;
+}) {
+  if (!text) return null;
+  const px = sizeMap[size];
+  // Split on {CODE} patterns, keeping the delimiters
+  const parts = text.split(/(\{[^}]+\})/g);
+  return (
+    <span className={className}>
+      {parts.map((part, i) => {
+        if (/^\{[^}]+\}$/.test(part)) {
+          const code = part.replace(/[{}]/g, "").replace("/", "");
+          return (
+            <img
+              key={i}
+              src={`https://svgs.scryfall.io/card-symbols/${encodeURIComponent(code)}.svg`}
+              alt={part}
+              width={px}
+              height={px}
+              className="inline-block align-text-bottom mx-px"
+              loading="lazy"
+            />
+          );
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </span>
+  );
+}

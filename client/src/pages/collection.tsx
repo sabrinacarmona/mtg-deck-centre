@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Search, Minus, Plus, Trash2, DollarSign, BookOpen, Import, X } from "lucide-react";
 import ImportDialog from "@/components/ImportDialog";
-import { ManaCost } from "@/components/ManaSymbols";
+import { ManaCost, OracleText } from "@/components/ManaSymbols";
 import type { CollectionCard } from "@shared/schema";
 
 const colorFilters = [
@@ -178,7 +178,10 @@ export default function CollectionPage() {
 
               {/* Info */}
               <div className="flex-1 min-w-0">
-                <div className="font-medium text-sm truncate">{card.name}</div>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-medium text-sm truncate">{card.name}</span>
+                  {card.manaCost && <ManaCost cost={card.manaCost} size="sm" />}
+                </div>
                 <div className="text-xs text-muted-foreground truncate">
                   {card.typeLine}
                 </div>
@@ -353,9 +356,14 @@ function CollectionCardZoom({
           </div>
 
           {card.oracleText && (
-            <p className="text-sm text-white/80 whitespace-pre-wrap leading-relaxed max-w-xs">
-              {card.oracleText}
-            </p>
+            <div className="text-sm text-white/80 leading-relaxed max-w-xs">
+              {card.oracleText.split("\n").map((line, i) => (
+                <span key={i}>
+                  {i > 0 && <br />}
+                  <OracleText text={line} size="sm" />
+                </span>
+              ))}
+            </div>
           )}
 
           {card.power && card.toughness && (

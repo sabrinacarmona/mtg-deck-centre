@@ -4,7 +4,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Camera, Keyboard, Search, Loader2, X } from "lucide-react";
+import { Camera, Keyboard, Search, Loader2, X, Monitor, ShieldAlert, VideoOff, AlertCircle } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -96,6 +96,13 @@ export default function ScannerPage() {
 
   const startCamera = useCallback(async () => {
     setCameraError(null);
+
+    // Check if getUserMedia is supported
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setCameraError("not_supported");
+      return;
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "environment" },
@@ -105,11 +112,15 @@ export default function ScannerPage() {
         videoRef.current.srcObject = stream;
       }
     } catch (err: any) {
-      setCameraError(
-        err.name === "NotAllowedError"
-          ? "Camera access denied. Please allow camera access in your browser settings."
-          : "Could not access camera. Try the manual text input instead."
-      );
+      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+        setCameraError("permission_denied");
+      } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+        setCameraError("no_camera");
+      } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
+        setCameraError("in_use");
+      } else {
+        setCameraError("no_camera");
+      }
     }
   }, []);
 
@@ -227,17 +238,11 @@ export default function ScannerPage() {
       {mode === "camera" && (
         <div className="space-y-3">
           {cameraError ? (
-            <div className="bg-destructive/10 text-destructive rounded-xl p-4 text-sm">
-              {cameraError}
-              <Button
-                variant="secondary"
-                size="sm"
-                className="mt-2"
-                onClick={() => setMode("text")}
-              >
-                Use manual input instead
-              </Button>
-            </div>
+            <CameraErrorDisplay
+              error={cameraError}
+              onSwitchToManual={() => setMode("text")}
+              onRetry={startCamera}
+            />
           ) : (
             <>
               <div className="relative rounded-xl overflow-hidden bg-black aspect-video card-frame-gold">
@@ -385,6 +390,67 @@ export default function ScannerPage() {
             : "Type a card name to look it up instantly"}
         </div>
       )}
+    </div>
+  );
+}
+
+function CameraErrorDisplay({
+  error,
+  onSwitchToManual,
+  onRetry,
+}: {
+  error: string;
+  onSwitchToManual: () => void;
+  onRetry: () => void;
+}) {
+  const errorConfig: Record<string, { icon: typeof Camera; title: string; message: string; showRetry: boolean }> = {
+    permission_denied: {
+      icon: ShieldAlert,
+      title: "Camera Access Denied",
+      message: "Please allow camera access in your browser settings, then try again.",
+      showRetry: true,
+    },
+    no_camera: {
+      icon: Monitor,
+      title: "No Camera Detected",
+      message: "Camera scanning works best on mobile devices. Use the Manual Input tab to search by card name instead.",
+      showRetry: false,
+    },
+    in_use: {
+      icon: VideoOff,
+      title: "Camera In Use",
+      message: "Your camera is being used by another app. Close the other app and try again.",
+      showRetry: true,
+    },
+    not_supported: {
+      icon: AlertCircle,
+      title: "Browser Not Supported",
+      message: "Your browser doesn't support camera access. Try using Chrome or Safari, or use the Manual Input tab.",
+      showRetry: false,
+    },
+  };
+
+  const config = errorConfig[error] || errorConfig.no_camera;
+  const Icon = config.icon;
+
+  return (
+    <div className="rounded-xl border border-border/50 bg-card/50 p-6 text-center space-y-3">
+      <div className="w-12 h-12 mx-auto rounded-full bg-destructive/10 flex items-center justify-center">
+        <Icon className="w-6 h-6 text-destructive" />
+      </div>
+      <h3 className="font-semibold text-sm">{config.title}</h3>
+      <p className="text-sm text-muted-foreground max-w-sm mx-auto">{config.message}</p>
+      <div className="flex gap-2 justify-center pt-1">
+        {config.showRetry && (
+          <Button variant="secondary" size="sm" onClick={onRetry}>
+            Try Again
+          </Button>
+        )}
+        <Button size="sm" onClick={onSwitchToManual}>
+          <Keyboard className="w-3.5 h-3.5 mr-1.5" />
+          Use Manual Input
+        </Button>
+      </div>
     </div>
   );
 }

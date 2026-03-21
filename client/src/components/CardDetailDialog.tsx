@@ -7,7 +7,8 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Heart } from "lucide-react";
+import { ManaCost, OracleText } from "@/components/ManaSymbols";
 
 function getCardImage(card: ScryfallCard): string | null {
   if (card.image_uris) return card.image_uris.normal;
@@ -36,6 +37,8 @@ interface CardDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAddToCollection?: (card: ScryfallCard) => void;
+  onToggleWishlist?: (card: ScryfallCard) => void;
+  isWishlisted?: boolean;
 }
 
 export default function CardDetailDialog({
@@ -43,6 +46,8 @@ export default function CardDetailDialog({
   open,
   onOpenChange,
   onAddToCollection,
+  onToggleWishlist,
+  isWishlisted,
 }: CardDetailDialogProps) {
   if (!card) return null;
   const image = getCardImage(card);
@@ -85,7 +90,9 @@ export default function CardDetailDialog({
                 <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
                   Mana Cost
                 </div>
-                <div className="text-sm font-medium">{card.mana_cost}</div>
+                <div className="text-sm font-medium">
+                  <ManaCost cost={card.mana_cost} size="md" />
+                </div>
               </div>
             )}
 
@@ -94,8 +101,13 @@ export default function CardDetailDialog({
                 <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
                   Oracle Text
                 </div>
-                <div className="text-sm whitespace-pre-wrap leading-relaxed">
-                  {card.oracle_text}
+                <div className="text-sm leading-relaxed">
+                  {card.oracle_text.split("\n").map((line, i) => (
+                    <span key={i}>
+                      {i > 0 && <br />}
+                      <OracleText text={line} size="sm" />
+                    </span>
+                  ))}
                 </div>
               </div>
             )}
@@ -159,19 +171,31 @@ export default function CardDetailDialog({
               )}
             </div>
 
-            {onAddToCollection && (
-              <Button
-                className="w-full"
-                onClick={() => {
-                  onAddToCollection(card);
-                  onOpenChange(false);
-                }}
-                data-testid="detail-add-collection"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add to Collection
-              </Button>
-            )}
+            <div className="flex gap-2">
+              {onAddToCollection && (
+                <Button
+                  className="flex-1"
+                  onClick={() => {
+                    onAddToCollection(card);
+                    onOpenChange(false);
+                  }}
+                  data-testid="detail-add-collection"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add to Collection
+                </Button>
+              )}
+              {onToggleWishlist && (
+                <Button
+                  variant={isWishlisted ? "default" : "secondary"}
+                  className={isWishlisted ? "bg-red-500 hover:bg-red-600 text-white" : ""}
+                  onClick={() => onToggleWishlist(card)}
+                  data-testid="detail-toggle-wishlist"
+                >
+                  <Heart className={`w-4 h-4 ${isWishlisted ? "fill-current" : ""}`} />
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </DialogContent>
