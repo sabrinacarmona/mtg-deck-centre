@@ -1,9 +1,9 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import * as db from "./db";
 
-// ===== Route API calls to IndexedDB =====
+// ===== Route API calls to Supabase via db.ts =====
 
-/** Fake Response wrapper for compatibility with existing mutation code */
+/** Response wrapper for compatibility with existing mutation code */
 function jsonResponse(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
