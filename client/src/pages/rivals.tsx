@@ -18,7 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { ManaSymbol } from "@/components/ManaSymbols";
-import type { Rival } from "@/lib/db";
+import type { Rival } from "@shared/schema";
 
 /* ─── Matchup suggestion logic ────────────────────────────────── */
 

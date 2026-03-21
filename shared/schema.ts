@@ -69,6 +69,54 @@ export const insertDeckCardSchema = createInsertSchema(deckCards).omit({ id: tru
 export type InsertDeckCard = z.infer<typeof insertDeckCardSchema>;
 export type DeckCard = typeof deckCards.$inferSelect;
 
+// Game history
+export const gameHistory = sqliteTable("game_history", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  deckId: integer("deck_id").notNull(),
+  date: text("date").notNull(),
+  opponent: text("opponent").notNull(),
+  result: text("result").notNull(), // "win" | "loss" | "draw"
+  notes: text("notes").default(""),
+});
+
+export const insertGameHistorySchema = createInsertSchema(gameHistory).omit({ id: true });
+export type InsertGameHistory = z.infer<typeof insertGameHistorySchema>;
+export type GameHistory = typeof gameHistory.$inferSelect;
+
+// Wishlist
+export const wishlist = sqliteTable("wishlist", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  scryfallId: text("scryfall_id").notNull(),
+  name: text("name").notNull(),
+  imageSmall: text("image_small"),
+  imageNormal: text("image_normal"),
+  priceUsd: text("price_usd"),
+  typeLine: text("type_line").notNull(),
+  addedDate: text("added_date"),
+});
+
+export const insertWishlistSchema = createInsertSchema(wishlist).omit({ id: true });
+export type InsertWishlist = z.infer<typeof insertWishlistSchema>;
+export type Wishlist = typeof wishlist.$inferSelect;
+
+// Rivals
+export const rivals = sqliteTable("rivals", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  playerName: text("player_name").notNull(),
+  deckName: text("deck_name").notNull(),
+  commander: text("commander").notNull(),
+  colors: text("colors").default(""),
+  strategy: text("strategy").default(""),
+  keyThreats: text("key_threats"), // JSON array
+  weaknesses: text("weaknesses"),   // JSON array
+  counterTips: text("counter_tips"), // JSON array
+  notes: text("notes").default(""),
+});
+
+export const insertRivalSchema = createInsertSchema(rivals).omit({ id: true });
+export type InsertRival = z.infer<typeof insertRivalSchema>;
+export type Rival = typeof rivals.$inferSelect;
+
 // Scryfall API card shape (frontend only, not persisted)
 export interface ScryfallCard {
   id: string;

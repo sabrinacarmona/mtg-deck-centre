@@ -91,8 +91,88 @@ export async function registerRoutes(
     res.json(card);
   });
 
+  app.patch("/api/deck-cards/:id", async (req, res) => {
+    const card = await storage.updateDeckCard(Number(req.params.id), req.body);
+    if (!card) return res.status(404).json({ error: "Card not found" });
+    res.json(card);
+  });
+
   app.delete("/api/deck-cards/:id", async (req, res) => {
     await storage.removeDeckCard(Number(req.params.id));
+    res.json({ ok: true });
+  });
+
+  // ===== GAME HISTORY =====
+  app.get("/api/decks/:deckId/history", async (req, res) => {
+    const history = await storage.getGameHistory(Number(req.params.deckId));
+    res.json(history);
+  });
+
+  app.post("/api/decks/:deckId/history", async (req, res) => {
+    try {
+      const entry = await storage.addGameHistory({
+        ...req.body,
+        deckId: Number(req.params.deckId),
+      });
+      res.json(entry);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.delete("/api/game-history/:id", async (req, res) => {
+    await storage.removeGameHistory(Number(req.params.id));
+    res.json({ ok: true });
+  });
+
+  // ===== WISHLIST =====
+  app.get("/api/wishlist", async (_req, res) => {
+    const cards = await storage.getWishlist();
+    res.json(cards);
+  });
+
+  app.post("/api/wishlist", async (req, res) => {
+    try {
+      const card = await storage.addWishlist(req.body);
+      res.json(card);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.delete("/api/wishlist/scryfall/:scryfallId", async (req, res) => {
+    await storage.removeWishlistByScryfallId(req.params.scryfallId);
+    res.json({ ok: true });
+  });
+
+  app.delete("/api/wishlist/:id", async (req, res) => {
+    await storage.removeWishlist(Number(req.params.id));
+    res.json({ ok: true });
+  });
+
+  // ===== RIVALS =====
+  app.get("/api/rivals", async (_req, res) => {
+    const allRivals = await storage.getRivals();
+    res.json(allRivals);
+  });
+
+  app.post("/api/rivals", async (req, res) => {
+    try {
+      const rival = await storage.addRival(req.body);
+      res.json(rival);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.patch("/api/rivals/:id", async (req, res) => {
+    const rival = await storage.updateRival(Number(req.params.id), req.body);
+    if (!rival) return res.status(404).json({ error: "Rival not found" });
+    res.json(rival);
+  });
+
+  app.delete("/api/rivals/:id", async (req, res) => {
+    await storage.deleteRival(Number(req.params.id));
     res.json({ ok: true });
   });
 
@@ -228,6 +308,10 @@ export async function registerRoutes(
       res.status(502).json({ error: e.message });
     }
   });
+
+  // ===== WISHLIST DELETE must come before generic param route =====
+  // Route order fix: Express matches /api/wishlist/scryfall/:id before /api/wishlist/:id
+  // Both are already registered above in correct order.
 
   return httpServer;
 }

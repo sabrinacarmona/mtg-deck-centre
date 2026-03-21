@@ -13,7 +13,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import type { Rival } from "@/lib/db";
+import type { Rival } from "@shared/schema";
 
 interface GameHistoryEntry {
   id: number;

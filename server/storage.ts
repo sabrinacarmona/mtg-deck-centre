@@ -2,6 +2,9 @@ import {
   type CollectionCard, type InsertCollectionCard, collectionCards,
   type Deck, type InsertDeck, decks,
   type DeckCard, type InsertDeckCard, deckCards,
+  type GameHistory, type InsertGameHistory, gameHistory,
+  type Wishlist, type InsertWishlist, wishlist,
+  type Rival, type InsertRival, rivals,
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
@@ -31,7 +34,25 @@ export interface IStorage {
   getDeckCards(deckId: number): Promise<DeckCard[]>;
   addDeckCard(card: InsertDeckCard): Promise<DeckCard>;
   updateDeckCardQuantity(id: number, quantity: number): Promise<DeckCard | undefined>;
+  updateDeckCard(id: number, data: Partial<InsertDeckCard>): Promise<DeckCard | undefined>;
   removeDeckCard(id: number): Promise<void>;
+
+  // Game history
+  getGameHistory(deckId: number): Promise<GameHistory[]>;
+  addGameHistory(entry: InsertGameHistory): Promise<GameHistory>;
+  removeGameHistory(id: number): Promise<void>;
+
+  // Wishlist
+  getWishlist(): Promise<Wishlist[]>;
+  addWishlist(card: InsertWishlist): Promise<Wishlist>;
+  removeWishlist(id: number): Promise<void>;
+  removeWishlistByScryfallId(scryfallId: string): Promise<void>;
+
+  // Rivals
+  getRivals(): Promise<Rival[]>;
+  addRival(rival: InsertRival): Promise<Rival>;
+  updateRival(id: number, data: Partial<InsertRival>): Promise<Rival | undefined>;
+  deleteRival(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -120,8 +141,62 @@ export class DatabaseStorage implements IStorage {
     return db.update(deckCards).set({ quantity }).where(eq(deckCards.id, id)).returning().get();
   }
 
+  async updateDeckCard(id: number, data: Partial<InsertDeckCard>): Promise<DeckCard | undefined> {
+    return db.update(deckCards).set(data).where(eq(deckCards.id, id)).returning().get();
+  }
+
   async removeDeckCard(id: number): Promise<void> {
     db.delete(deckCards).where(eq(deckCards.id, id)).run();
+  }
+
+  // Game history
+  async getGameHistory(deckId: number): Promise<GameHistory[]> {
+    return db.select().from(gameHistory).where(eq(gameHistory.deckId, deckId)).all();
+  }
+
+  async addGameHistory(entry: InsertGameHistory): Promise<GameHistory> {
+    return db.insert(gameHistory).values(entry).returning().get();
+  }
+
+  async removeGameHistory(id: number): Promise<void> {
+    db.delete(gameHistory).where(eq(gameHistory.id, id)).run();
+  }
+
+  // Wishlist
+  async getWishlist(): Promise<Wishlist[]> {
+    return db.select().from(wishlist).all();
+  }
+
+  async addWishlist(card: InsertWishlist): Promise<Wishlist> {
+    // Check if already exists
+    const existing = db.select().from(wishlist).where(eq(wishlist.scryfallId, card.scryfallId)).get();
+    if (existing) return existing;
+    return db.insert(wishlist).values(card).returning().get();
+  }
+
+  async removeWishlist(id: number): Promise<void> {
+    db.delete(wishlist).where(eq(wishlist.id, id)).run();
+  }
+
+  async removeWishlistByScryfallId(scryfallId: string): Promise<void> {
+    db.delete(wishlist).where(eq(wishlist.scryfallId, scryfallId)).run();
+  }
+
+  // Rivals
+  async getRivals(): Promise<Rival[]> {
+    return db.select().from(rivals).all();
+  }
+
+  async addRival(rival: InsertRival): Promise<Rival> {
+    return db.insert(rivals).values(rival).returning().get();
+  }
+
+  async updateRival(id: number, data: Partial<InsertRival>): Promise<Rival | undefined> {
+    return db.update(rivals).set(data).where(eq(rivals.id, id)).returning().get();
+  }
+
+  async deleteRival(id: number): Promise<void> {
+    db.delete(rivals).where(eq(rivals.id, id)).run();
   }
 }
 
