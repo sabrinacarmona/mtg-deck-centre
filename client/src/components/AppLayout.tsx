@@ -72,7 +72,7 @@ function DesktopSidebar({ location, collapsed, onToggle }: { location: string; c
   return (
     <aside
       className={`hidden lg:flex flex-col fixed top-0 left-0 h-full z-40 transition-all duration-300 ease-out sidebar-glow ${
-        collapsed ? "w-[68px]" : "w-[220px]"
+        collapsed ? "w-[60px]" : "w-[200px]"
       }`}
       style={{ background: "hsl(28 22% 8%)" }}
       data-testid="desktop-sidebar"
@@ -162,7 +162,7 @@ function SidebarLink({
   return (
     <Link href={item.path}>
       <button
-        className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
+        className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
           active
             ? "bg-primary/15 text-primary shadow-sm shadow-primary/10"
             : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
@@ -375,7 +375,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Main content area */}
       <div
         className={`flex flex-col flex-1 min-h-screen transition-all duration-300 ${
-          sidebarCollapsed ? "lg:ml-[68px]" : "lg:ml-[220px]"
+          sidebarCollapsed ? "lg:ml-[60px]" : "lg:ml-[200px]"
         }`}
       >
         {/* Mobile header */}
@@ -385,7 +385,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <TabletTopNav location={location} />
 
         {/* Main content */}
-        <main className="flex-1 w-full px-4 py-4 md:py-6 pb-20 md:pb-6 lg:px-6 lg:py-8">
+        <main className="flex-1 w-full px-4 py-4 md:py-6 pb-20 md:pb-6 lg:px-4 lg:py-4">
           {children}
         </main>
 
