@@ -385,7 +385,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <TabletTopNav location={location} />
 
         {/* Main content */}
-        <main className="flex-1 w-full max-w-[1200px] mx-auto px-4 py-4 md:py-6 pb-20 md:pb-6 lg:px-6 lg:py-8">
+        <main className="flex-1 w-full px-4 py-4 md:py-6 pb-20 md:pb-6 lg:px-6 lg:py-8">
           {children}
         </main>
 
