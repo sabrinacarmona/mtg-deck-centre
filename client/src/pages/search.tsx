@@ -157,6 +157,9 @@ export default function SearchPage() {
     queryKey: ["/api/decks"],
   });
 
+  // Only show Sabrina's decks in "Add to Deck" dropdowns (exclude Will's rival decks)
+  const myDecksForAdd = decks.filter((d) => !d.name.startsWith("Will's"));
+
   const { data: wishlistCards = [] } = useQuery<WishlistCard[]>({
     queryKey: ["/api/wishlist"],
   });
@@ -462,7 +465,7 @@ export default function SearchPage() {
             <SearchCardItem
               key={card.id}
               card={card}
-              decks={decks}
+              decks={myDecksForAdd}
               wasAdded={addedIds.has(card.id)}
               isWishlisted={wishlistIds.has(card.id)}
               onAddToCollection={() => addToCollection.mutate(card)}
@@ -506,7 +509,7 @@ export default function SearchPage() {
         onAddToCollection={(card) => addToCollection.mutate(card)}
         onToggleWishlist={(card) => toggleWishlist.mutate(card)}
         isWishlisted={selectedCard ? wishlistIds.has(selectedCard.id) : false}
-        decks={decks}
+        decks={myDecksForAdd}
         onAddToDeck={(card, deckId) => addToDeck.mutate({ card, deckId })}
       />
     </div>
@@ -673,7 +676,8 @@ function HomeDashboard({ decks }: { decks: Deck[] }) {
   return (
     <div className="space-y-8">
       {/* Stats row */}
-      <div className="grid grid-cols-3 gap-3 stagger-children">
+      <div className="grid grid-cols-4 gap-3 stagger-children">
+        <StatCard icon={Crown} label="Decks" value={myDecks.length.toString()} />
         <StatCard icon={BookOpen} label="Total Cards" value={totalCards.toString()} />
         <StatCard icon={Layers3} label="Unique" value={collectionCards.length.toString()} />
         <StatCard icon={DollarSign} label="Est. Value" value={`$${totalValue.toFixed(2)}`} accent />
