@@ -15,10 +15,6 @@ import {
   Swords,
   Sparkles,
   TrendingUp,
-  Gamepad2,
-  GraduationCap,
-  Hand,
-  BarChart3,
   ExternalLink,
   Filter,
   ChevronDown,
@@ -266,7 +262,7 @@ export default function SearchPage() {
   }, []);
 
   return (
-    <div className="space-y-6" data-testid="search-page">
+    <div className="space-y-3" data-testid="search-page">
       {/* Search input */}
       <div className="relative">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -674,7 +670,7 @@ function HomeDashboard({ decks }: { decks: Deck[] }) {
   }, 0);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       {/* Stats row */}
       <div className="grid grid-cols-4 gap-3 stagger-children">
         <StatCard icon={Crown} label="Decks" value={myDecks.length.toString()} />
@@ -686,13 +682,13 @@ function HomeDashboard({ decks }: { decks: Deck[] }) {
       {/* Card of the Day */}
       {randomCard && (
         <div className="animate-fade-in-up">
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center gap-2 mb-2">
             <Sparkles className="w-4 h-4 text-primary" />
             <h2 className="text-sm font-semibold text-foreground/80 uppercase tracking-wide">
               Card of the Day
             </h2>
           </div>
-          <div className="glass-panel p-4 flex gap-4 items-start">
+          <div className="glass-panel p-3 flex gap-3 items-start">
             <div className="w-28 flex-shrink-0">
               {randomCard.image_uris?.normal ? (
                 <img
@@ -753,7 +749,7 @@ function HomeDashboard({ decks }: { decks: Deck[] }) {
       {/* My Decks */}
       {myDecks.length > 0 && (
         <div className="animate-fade-in-up" style={{ animationDelay: "100ms" }}>
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <Crown className="w-4 h-4 text-primary" />
               <h2 className="text-sm font-semibold text-foreground/80 uppercase tracking-wide">My Decks</h2>
@@ -799,7 +795,7 @@ function HomeDashboard({ decks }: { decks: Deck[] }) {
       {/* Will's Decks */}
       {willsDecks.length > 0 && (
         <div className="animate-fade-in-up" style={{ animationDelay: "200ms" }}>
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center gap-2 mb-2">
             <Swords className="w-4 h-4 text-red-400" />
             <h2 className="text-sm font-semibold text-red-400/80 uppercase tracking-wide">Will's Decks</h2>
             <span className="text-[10px] text-muted-foreground ml-auto">Know thy enemy</span>
@@ -843,24 +839,13 @@ function HomeDashboard({ decks }: { decks: Deck[] }) {
         </div>
       )}
 
-      {/* Quick Links */}
-      <div className="animate-fade-in-up" style={{ animationDelay: "300ms" }}>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          <QuickLink href="/game-night" icon={Gamepad2} label="Game Night" desc="Track your matches" />
-          <QuickLink href="/goldfish" icon={Hand} label="Goldfish" desc="Test your hands" />
-          <QuickLink href="/learn" icon={GraduationCap} label="Learn MTG" desc="Rules & strategy" />
-          <QuickLink href="/rivals" icon={Swords} label="Rivals" desc="Counter strategies" />
-          <QuickLink href="/matchups" icon={BarChart3} label="Matchups" desc="Win/loss history" />
-          <QuickLink href="/wishlist" icon={Heart} label="Wishlist" desc="Cards to get" />
-        </div>
-      </div>
     </div>
   );
 }
 
 function StatCard({ icon: Icon, label, value, accent }: { icon: any; label: string; value: string; accent?: boolean }) {
   return (
-    <div className="card-frame rounded-xl p-4 text-center">
+    <div className="card-frame rounded-xl p-3 text-center">
       <Icon className="w-5 h-5 mx-auto mb-1.5 text-primary/60" />
       <div className={`text-2xl font-display font-bold animate-count-up ${accent ? "text-primary" : ""}`}>
         {value}
@@ -870,18 +855,3 @@ function StatCard({ icon: Icon, label, value, accent }: { icon: any; label: stri
   );
 }
 
-function QuickLink({ href, icon: Icon, label, desc }: { href: string; icon: any; label: string; desc: string }) {
-  return (
-    <Link href={href}>
-      <div className="flex items-center gap-3 p-3 rounded-xl bg-card/50 border border-border/30 hover:border-primary/20 hover:bg-card/80 transition-all cursor-pointer group">
-        <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/15 transition-colors">
-          <Icon className="w-4 h-4 text-primary" />
-        </div>
-        <div className="min-w-0">
-          <div className="text-sm font-medium text-foreground leading-tight">{label}</div>
-          <div className="text-[10px] text-muted-foreground">{desc}</div>
-        </div>
-      </div>
-    </Link>
-  );
-}
