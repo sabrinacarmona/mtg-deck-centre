@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
   Search,
@@ -15,12 +15,8 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  LogIn,
-  LogOut,
-  User,
 } from "lucide-react";
 import { PerplexityAttribution } from "./PerplexityAttribution";
-import { useAuth } from "@/lib/auth";
 
 /* ── Navigation config ─────────────────────────────── */
 
@@ -72,7 +68,7 @@ function isActive(location: string, path: string) {
 
 /* ── Desktop Sidebar ─────────────────────────────── */
 
-function DesktopSidebar({ location, collapsed, onToggle, user }: { location: string; collapsed: boolean; onToggle: () => void; user: any }) {
+function DesktopSidebar({ location, collapsed, onToggle }: { location: string; collapsed: boolean; onToggle: () => void }) {
   return (
     <aside
       className={`hidden lg:flex flex-col fixed top-0 left-0 h-full z-40 transition-all duration-300 ease-out sidebar-glow ${
@@ -115,15 +111,6 @@ function DesktopSidebar({ location, collapsed, onToggle, user }: { location: str
           ))}
         </NavSection>
       </nav>
-
-      {/* Auth section */}
-      <div className="px-2 pb-1 pt-1">
-        {user ? (
-          <UserProfileDropdown collapsed={collapsed} />
-        ) : (
-          <SignInButton collapsed={collapsed} />
-        )}
-      </div>
 
       {/* Collapse toggle */}
       <div className="px-2 pb-3 pt-1">
@@ -225,7 +212,6 @@ function TabletTopNav({ location }: { location: string }) {
               );
             })}
           </nav>
-          <CompactAuthButton />
         </div>
       </div>
     </header>
@@ -353,10 +339,10 @@ function MobileMoreSheet({
 
 /* ── Mobile Header ─────────────────────────────────── */
 
-function MobileHeader({ location }: { location: string }) {
+function MobileHeader() {
   return (
     <header className="sticky top-0 z-50 md:hidden border-b border-primary/20 bg-background/90 backdrop-blur-xl">
-      <div className="px-4 py-3 flex items-center justify-between">
+      <div className="px-4 py-3 flex items-center">
         <Link href="/">
           <div className="flex items-center gap-2 cursor-pointer" data-testid="logo-link-mobile">
             <VaultLogo />
@@ -365,7 +351,6 @@ function MobileHeader({ location }: { location: string }) {
             </span>
           </div>
         </Link>
-        <CompactAuthButton />
       </div>
     </header>
   );
@@ -377,7 +362,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [moreOpen, setMoreOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { user } = useAuth();
 
   return (
     <div className="flex min-h-screen">
@@ -386,7 +370,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         location={location}
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed((p) => !p)}
-        user={user}
       />
 
       {/* Main content area */}
@@ -396,7 +379,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         }`}
       >
         {/* Mobile header */}
-        <MobileHeader location={location} />
+        <MobileHeader />
 
         {/* Tablet top nav */}
         <TabletTopNav location={location} />
@@ -422,136 +405,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         location={location}
       />
     </div>
-  );
-}
-
-/* ── Auth UI components ────────────────────────────── */
-
-function UserAvatar({ name, size = "md" }: { name: string; size?: "sm" | "md" }) {
-  const initial = name?.charAt(0)?.toUpperCase() || "?";
-  const px = size === "sm" ? "w-7 h-7 text-xs" : "w-8 h-8 text-sm";
-  return (
-    <div
-      className={`${px} rounded-full border-2 border-primary/60 bg-primary/15 text-primary font-bold flex items-center justify-center flex-shrink-0`}
-    >
-      {initial}
-    </div>
-  );
-}
-
-function UserProfileDropdown({ collapsed }: { collapsed?: boolean }) {
-  const { user, signOut } = useAuth();
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    if (open) document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [open]);
-
-  if (!user) return null;
-
-  const displayName =
-    user.user_metadata?.full_name || user.user_metadata?.name || user.email || "User";
-  const email = user.email || "";
-  const createdAt = user.created_at
-    ? new Date(user.created_at).toLocaleDateString("en-US", {
-        month: "short",
-        year: "numeric",
-      })
-    : null;
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen((p) => !p)}
-        className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium transition-colors text-muted-foreground hover:text-foreground hover:bg-muted/40"
-        title={collapsed ? displayName : undefined}
-      >
-        <UserAvatar name={displayName} />
-        {!collapsed && <span className="truncate">{displayName}</span>}
-      </button>
-
-      {open && (
-        <div
-          className={`absolute z-50 bg-card border border-border rounded-xl shadow-lg p-3 min-w-[200px] ${
-            collapsed ? "left-[72px] bottom-0" : "left-0 bottom-full mb-1"
-          }`}
-        >
-          <div className="mb-3">
-            <p className="text-sm font-semibold text-foreground truncate">{displayName}</p>
-            {email && (
-              <p className="text-xs text-muted-foreground truncate">{email}</p>
-            )}
-            {createdAt && (
-              <p className="text-xs text-muted-foreground/60 mt-1">
-                Member since {createdAt}
-              </p>
-            )}
-          </div>
-          <button
-            onClick={() => {
-              signOut();
-              setOpen(false);
-            }}
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            Sign Out
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SignInButton({ collapsed }: { collapsed?: boolean }) {
-  const { signInWithGoogle, loading } = useAuth();
-
-  return (
-    <button
-      onClick={signInWithGoogle}
-      disabled={loading}
-      className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium transition-colors border border-primary/30 text-primary/80 hover:text-primary hover:bg-primary/10 hover:border-primary/50 ${
-        collapsed ? "justify-center px-0" : ""
-      }`}
-      title={collapsed ? "Sign In" : undefined}
-    >
-      <LogIn className="w-[18px] h-[18px] flex-shrink-0" />
-      {!collapsed && <span>Sign In</span>}
-    </button>
-  );
-}
-
-function CompactAuthButton() {
-  const { user, signInWithGoogle, signOut, loading } = useAuth();
-
-  if (user) {
-    const displayName =
-      user.user_metadata?.full_name || user.user_metadata?.name || user.email || "User";
-    return (
-      <button
-        onClick={signOut}
-        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors text-muted-foreground hover:text-primary hover:bg-primary/5"
-        title="Sign Out"
-      >
-        <UserAvatar name={displayName} size="sm" />
-      </button>
-    );
-  }
-
-  return (
-    <button
-      onClick={signInWithGoogle}
-      disabled={loading}
-      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors border border-primary/30 text-primary/70 hover:text-primary hover:bg-primary/5"
-    >
-      <LogIn className="w-3.5 h-3.5" />
-      <span>Sign In</span>
-    </button>
   );
 }
 

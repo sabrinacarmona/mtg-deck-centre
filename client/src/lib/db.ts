@@ -1,15 +1,6 @@
 import { supabase } from "./supabase";
 
-// ===== AUTH HELPER =====
-
-export async function getCurrentUserId(): Promise<string | null> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return user?.id ?? null;
-}
-
-// ===== INTERFACES (unchanged) =====
+// ===== INTERFACES =====
 
 interface CollectionCard {
   id?: number;
