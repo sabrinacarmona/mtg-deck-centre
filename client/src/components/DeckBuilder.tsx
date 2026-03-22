@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
@@ -26,6 +26,10 @@ import {
   Trash2,
   Save,
   Sparkles,
+  Filter,
+  X,
+  Search,
+  ChevronDown,
 } from "lucide-react";
 import type { CollectionCard, ScryfallCard } from "@shared/schema";
 
@@ -65,6 +69,24 @@ const BASIC_LANDS: Record<string, string> = {
   R: "Mountain",
   G: "Forest",
 };
+
+const MANA_COLORS = ["W", "U", "B", "R", "G"] as const;
+const RARITY_OPTIONS = ["common", "uncommon", "rare", "mythic"] as const;
+const TYPE_OPTIONS = ["Creature", "Instant", "Sorcery", "Enchantment", "Artifact", "Land", "Planeswalker"] as const;
+
+const RARITY_LABELS: Record<string, string> = {
+  common: "Common",
+  uncommon: "Uncommon",
+  rare: "Rare",
+  mythic: "Mythic",
+};
+
+interface DeckBuilderFilters {
+  sets: Set<string>;
+  colors: Set<string>;
+  rarities: Set<string>;
+  types: Set<string>;
+}
 
 function parseColors(jsonStr: string | null): string[] {
   if (!jsonStr) return [];
@@ -137,18 +159,105 @@ export default function DeckBuilder({ open, onOpenChange }: DeckBuilderProps) {
     queryKey: ["/api/collection"],
   });
 
-  // Find commander candidates from collection
+  // --- Filters ---
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filters, setFilters] = useState<DeckBuilderFilters>({
+    sets: new Set(),
+    colors: new Set(),
+    rarities: new Set(),
+    types: new Set(),
+  });
+  const [setSearch, setSetSearch] = useState("");
+  const [setDropdownOpen, setSetDropdownOpen] = useState(false);
+  const setDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (setDropdownRef.current && !setDropdownRef.current.contains(e.target as Node)) {
+        setSetDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const hasActiveFilters = filters.sets.size > 0 || filters.colors.size > 0 || filters.rarities.size > 0 || filters.types.size > 0;
+
+  const clearFilters = useCallback(() => {
+    setFilters({ sets: new Set(), colors: new Set(), rarities: new Set(), types: new Set() });
+    setSetSearch("");
+  }, []);
+
+  const toggleFilter = useCallback(<K extends keyof DeckBuilderFilters>(key: K, value: string) => {
+    setFilters((prev) => {
+      const next = new Set(prev[key]);
+      if (next.has(value)) next.delete(value);
+      else next.add(value);
+      return { ...prev, [key]: next };
+    });
+  }, []);
+
+  // Compute available sets from collection with card counts
+  const availableSets = useMemo(() => {
+    const setCounts = new Map<string, number>();
+    for (const card of collectionCards) {
+      const setName = card.setName || "Unknown";
+      setCounts.set(setName, (setCounts.get(setName) || 0) + (card.quantity || 1));
+    }
+    return Array.from(setCounts.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [collectionCards]);
+
+  // Apply filters to collection
+  const filteredCards = useMemo(() => {
+    if (!hasActiveFilters) return collectionCards;
+
+    return collectionCards.filter((card) => {
+      // Set filter
+      if (filters.sets.size > 0) {
+        const cardSet = card.setName || "Unknown";
+        if (!filters.sets.has(cardSet)) return false;
+      }
+      // Color identity filter
+      if (filters.colors.size > 0) {
+        const ci = parseColors(card.colorIdentity);
+        const wantColorless = filters.colors.has("C");
+        const selectedWUBRG = new Set(Array.from(filters.colors).filter((c) => c !== "C"));
+        if (ci.length === 0) {
+          // Colorless card: only show if "C" is selected
+          if (!wantColorless) return false;
+        } else {
+          // Colored card: all its colors must be among selected WUBRG colors
+          if (selectedWUBRG.size === 0) return false;
+          if (!ci.every((c) => selectedWUBRG.has(c))) return false;
+        }
+      }
+      // Rarity filter
+      if (filters.rarities.size > 0) {
+        const rarity = (card.rarity || "").toLowerCase();
+        if (!filters.rarities.has(rarity)) return false;
+      }
+      // Type filter
+      if (filters.types.size > 0) {
+        const typeLine = (card.typeLine || "").toLowerCase();
+        const matchesType = Array.from(filters.types).some((t) => typeLine.includes(t.toLowerCase()));
+        if (!matchesType) return false;
+      }
+      return true;
+    });
+  }, [collectionCards, filters, hasActiveFilters]);
+
+  // Find commander candidates from filtered collection
   const commanders = useMemo(() => {
-    const legendaries = collectionCards.filter(isLegendaryCreature);
+    const legendaries = filteredCards.filter(isLegendaryCreature);
 
     return legendaries
       .map((card): CommanderCandidate => {
         const ci = parseColors(card.colorIdentity);
-        const matching = collectionCards.filter((c) => {
+        const matching = filteredCards.filter((c) => {
           if (c.id === card.id) return false;
           const cardCI = parseColors(c.colorIdentity);
-          // Card fits if all its colors are in the commander's color identity
-          // Colorless cards always fit
           if (cardCI.length === 0) return true;
           return cardCI.every((color) => ci.includes(color));
         });
@@ -156,13 +265,13 @@ export default function DeckBuilder({ open, onOpenChange }: DeckBuilderProps) {
           card,
           colorIdentity: ci,
           matchingCards: matching.length,
-          totalCards: collectionCards.length,
+          totalCards: filteredCards.length,
           strategy: getStrategy(card),
         };
       })
       .sort((a, b) => b.matchingCards - a.matchingCards)
       .slice(0, 8);
-  }, [collectionCards]);
+  }, [filteredCards]);
 
   // Auto-build deck when commander is selected
   const buildDeck = (commander: CommanderCandidate) => {
@@ -172,7 +281,7 @@ export default function DeckBuilder({ open, onOpenChange }: DeckBuilderProps) {
     const commanderOracleText = commander.card.oracleText || "";
 
     // Filter cards that fit the commander's color identity
-    const eligible = collectionCards
+    const eligible = filteredCards
       .filter((c) => {
         if (c.id === commander.card.id) return false;
         const cardCI = parseColors(c.colorIdentity);
@@ -399,6 +508,8 @@ export default function DeckBuilder({ open, onOpenChange }: DeckBuilderProps) {
       setSelectedCommander(null);
       setDeckSlots([]);
       setDeckName("");
+      clearFilters();
+      setFiltersOpen(false);
     }
     onOpenChange(open);
   };
@@ -468,6 +579,171 @@ export default function DeckBuilder({ open, onOpenChange }: DeckBuilderProps) {
           </div>
         </div>
 
+        {/* Filters Panel */}
+        {step === 1 && !isLoading && collectionCards.length > 0 && (
+          <div className="rounded-lg border border-card-border bg-card/50">
+            <button
+              className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-muted/50 transition-colors rounded-lg"
+              onClick={() => setFiltersOpen(!filtersOpen)}
+            >
+              <Filter className="w-3.5 h-3.5 text-primary" />
+              <span className="font-medium">Filters</span>
+              {hasActiveFilters && (
+                <Badge variant="default" className="text-[9px] h-4 px-1.5">
+                  {filters.sets.size + filters.colors.size + filters.rarities.size + filters.types.size}
+                </Badge>
+              )}
+              {hasActiveFilters && (
+                <span className="text-[10px] text-muted-foreground ml-auto mr-2">
+                  Building from {filteredCards.length} of {collectionCards.length} cards
+                </span>
+              )}
+              <ChevronDown className={`w-3 h-3 text-muted-foreground ml-auto transition-transform ${filtersOpen ? "rotate-180" : ""}`} />
+            </button>
+
+            {filtersOpen && (
+              <div className="px-3 pb-3 space-y-2.5 border-t border-card-border pt-2.5">
+                {/* Set Filter */}
+                <div>
+                  <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">Set</label>
+                  <div className="relative" ref={setDropdownRef}>
+                    <div className="relative">
+                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+                      <input
+                        type="text"
+                        value={setSearch}
+                        onChange={(e) => { setSetSearch(e.target.value); setSetDropdownOpen(true); }}
+                        onFocus={() => setSetDropdownOpen(true)}
+                        placeholder="Search sets..."
+                        className="w-full h-7 pl-7 pr-2 text-xs rounded-md border border-input bg-background"
+                      />
+                    </div>
+                    {setDropdownOpen && (
+                      <div className="absolute z-50 mt-1 w-full max-h-36 overflow-y-auto rounded-md border bg-popover shadow-md">
+                        {availableSets
+                          .filter((s) => s.name.toLowerCase().includes(setSearch.toLowerCase()))
+                          .map((s) => (
+                            <button
+                              key={s.name}
+                              className={`w-full flex items-center gap-2 px-2 py-1.5 text-xs hover:bg-muted/50 text-left ${filters.sets.has(s.name) ? "bg-primary/10 text-primary" : ""}`}
+                              onClick={() => toggleFilter("sets", s.name)}
+                            >
+                              <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0 ${filters.sets.has(s.name) ? "bg-primary border-primary" : "border-muted-foreground/30"}`}>
+                                {filters.sets.has(s.name) && <Check className="w-2.5 h-2.5 text-primary-foreground" />}
+                              </div>
+                              <span className="truncate">{s.name}</span>
+                              <span className="text-[10px] text-muted-foreground ml-auto shrink-0">({s.count})</span>
+                            </button>
+                          ))}
+                        {availableSets.filter((s) => s.name.toLowerCase().includes(setSearch.toLowerCase())).length === 0 && (
+                          <div className="px-2 py-2 text-xs text-muted-foreground text-center">No sets found</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {filters.sets.size > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {Array.from(filters.sets).map((s) => (
+                        <Badge key={s} variant="secondary" className="text-[9px] h-5 gap-1 cursor-pointer" onClick={() => toggleFilter("sets", s)}>
+                          {s}
+                          <X className="w-2.5 h-2.5" />
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Color Identity Filter */}
+                <div>
+                  <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">Color Identity</label>
+                  <div className="flex items-center gap-1">
+                    {MANA_COLORS.map((c) => (
+                      <button
+                        key={c}
+                        className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${filters.colors.has(c) ? "ring-2 ring-primary ring-offset-1 ring-offset-background" : "opacity-50 hover:opacity-80"}`}
+                        onClick={() => toggleFilter("colors", c)}
+                        title={c === "W" ? "White" : c === "U" ? "Blue" : c === "B" ? "Black" : c === "R" ? "Red" : "Green"}
+                      >
+                        <img
+                          src={`https://svgs.scryfall.io/card-symbols/${c}.svg`}
+                          alt={c}
+                          width={20}
+                          height={20}
+                          className="rounded-full"
+                        />
+                      </button>
+                    ))}
+                    <button
+                      className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${filters.colors.has("C") ? "ring-2 ring-primary ring-offset-1 ring-offset-background" : "opacity-50 hover:opacity-80"}`}
+                      onClick={() => toggleFilter("colors", "C")}
+                      title="Colorless"
+                    >
+                      <img
+                        src="https://svgs.scryfall.io/card-symbols/C.svg"
+                        alt="C"
+                        width={20}
+                        height={20}
+                        className="rounded-full"
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Rarity Filter */}
+                <div>
+                  <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">Rarity</label>
+                  <div className="flex items-center gap-1">
+                    {RARITY_OPTIONS.map((r) => (
+                      <button
+                        key={r}
+                        className={`h-6 px-2 rounded-md text-[10px] font-medium border transition-colors ${
+                          filters.rarities.has(r)
+                            ? r === "mythic" ? "bg-amber-600 border-amber-600 text-white"
+                            : r === "rare" ? "bg-amber-500 border-amber-500 text-white"
+                            : r === "uncommon" ? "bg-slate-400 border-slate-400 text-white"
+                            : "bg-gray-600 border-gray-600 text-white"
+                            : "border-muted-foreground/20 text-muted-foreground hover:border-muted-foreground/40"
+                        }`}
+                        onClick={() => toggleFilter("rarities", r)}
+                      >
+                        {RARITY_LABELS[r]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Card Type Filter */}
+                <div>
+                  <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">Card Type</label>
+                  <div className="flex items-center gap-1 flex-wrap">
+                    {TYPE_OPTIONS.map((t) => (
+                      <button
+                        key={t}
+                        className={`h-6 px-2 rounded-md text-[10px] font-medium border transition-colors ${
+                          filters.types.has(t)
+                            ? "bg-primary border-primary text-primary-foreground"
+                            : "border-muted-foreground/20 text-muted-foreground hover:border-muted-foreground/40"
+                        }`}
+                        onClick={() => toggleFilter("types", t)}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Clear Filters */}
+                {hasActiveFilters && (
+                  <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1 text-muted-foreground" onClick={clearFilters}>
+                    <X className="w-3 h-3" />
+                    Clear Filters
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* STEP 1: Commander Selection */}
         {step === 1 && (
           <div className="space-y-3">
@@ -490,11 +766,21 @@ export default function DeckBuilder({ open, onOpenChange }: DeckBuilderProps) {
               <div className="text-center py-8">
                 <Crown className="w-8 h-8 mx-auto mb-3 text-muted-foreground/30" />
                 <p className="text-sm text-muted-foreground">
-                  No legendary creatures found in your collection.
+                  {hasActiveFilters
+                    ? "No legendary creatures match your filters."
+                    : "No legendary creatures found in your collection."}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Import some legendary creatures to use as commanders.
+                  {hasActiveFilters
+                    ? "Try adjusting or clearing your filters."
+                    : "Import some legendary creatures to use as commanders."}
                 </p>
+                {hasActiveFilters && (
+                  <Button variant="ghost" size="sm" className="mt-2 text-xs gap-1" onClick={clearFilters}>
+                    <X className="w-3 h-3" />
+                    Clear Filters
+                  </Button>
+                )}
               </div>
             )}
 
