@@ -1,0 +1,1 @@
+if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/mtg-deck-centre/sw.js', { scope: '/mtg-deck-centre/' })})}

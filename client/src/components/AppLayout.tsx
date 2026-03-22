@@ -71,7 +71,7 @@ function isActive(location: string, path: string) {
 function DesktopSidebar({ location, collapsed, onToggle }: { location: string; collapsed: boolean; onToggle: () => void }) {
   return (
     <aside
-      className={`hidden lg:flex flex-col fixed top-0 left-0 h-full z-40 transition-all duration-300 ease-out sidebar-glow ${
+      className={`hidden lg:flex flex-col sticky top-0 h-screen z-40 transition-all duration-300 ease-out sidebar-glow flex-shrink-0 ${
         collapsed ? "w-[60px]" : "w-[200px]"
       }`}
       style={{ background: "hsl(28 22% 8%)" }}
@@ -375,7 +375,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Main content area */}
       <div
         className={`flex flex-col flex-1 min-h-screen transition-all duration-300 ${
-          sidebarCollapsed ? "lg:ml-[60px]" : "lg:ml-[200px]"
+          ""
         }`}
       >
         {/* Mobile header */}
