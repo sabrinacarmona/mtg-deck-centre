@@ -679,15 +679,39 @@ export async function scryfallCollection(
 
   for (let i = 0; i < identifiers.length; i += 75) {
     const batch = identifiers.slice(i, i + 75);
-    const res = await fetch(`${SCRYFALL_BASE}/cards/collection`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ identifiers: batch }),
-    });
-    if (!res.ok) throw new Error(`Scryfall error: ${res.status}`);
-    const data = await res.json();
-    allCards.push(...(data.data || []));
-    allNotFound.push(...(data.not_found || []));
+    try {
+      const res = await fetch(`${SCRYFALL_BASE}/cards/collection`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifiers: batch }),
+      });
+      if (!res.ok) {
+        console.warn(`Scryfall batch error: ${res.status}, trying cards individually`);
+        // Fallback: try each card individually via search
+        for (const id of batch) {
+          try {
+            const searchRes = await fetch(
+              `${SCRYFALL_BASE}/cards/named?fuzzy=${encodeURIComponent(id.name)}`
+            );
+            if (searchRes.ok) {
+              allCards.push(await searchRes.json());
+            } else {
+              allNotFound.push(id);
+            }
+            await new Promise((r) => setTimeout(r, 100));
+          } catch {
+            allNotFound.push(id);
+          }
+        }
+        continue;
+      }
+      const data = await res.json();
+      allCards.push(...(data.data || []));
+      allNotFound.push(...(data.not_found || []));
+    } catch (err) {
+      console.warn("Scryfall batch request failed:", err);
+      allNotFound.push(...batch);
+    }
     if (i + 75 < identifiers.length) {
       await new Promise((r) => setTimeout(r, 100));
     }

@@ -177,12 +177,13 @@ function parseTCGPlayerCSV(lines: string[]): { parsed: ParsedLine[]; tokensSkipp
     }
 
     const name = cleanTCGPlayerName(rawName);
-    if (!name || name.length < 2) continue;
+    if (!name || name.length < 2 || !/[a-zA-Z]/.test(name)) continue;
 
     results.push({
       name,
       quantity,
-      set: setIdx !== -1 ? cols[setIdx]?.trim() || undefined : undefined,
+      // Don't pass set for TCGPlayer — TCGPlayer uses full set names (e.g.
+      // "Modern Horizons 3") but Scryfall expects set codes (e.g. "mh3")
     });
   }
 
