@@ -667,7 +667,7 @@ export async function scryfallSearch(
 }
 
 export async function scryfallRandom(): Promise<any> {
-  const res = await fetch(`${SCRYFALL_BASE}/cards/random`);
+  const res = await fetch(`${SCRYFALL_BASE}/cards/random?q=-is:funny+-is:digital`);
   return res.json();
 }
 

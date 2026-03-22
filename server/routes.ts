@@ -301,7 +301,7 @@ export async function registerRoutes(
 
   app.get("/api/scryfall/random", async (_req, res) => {
     try {
-      const response = await fetch("https://api.scryfall.com/cards/random");
+      const response = await fetch("https://api.scryfall.com/cards/random?q=-is:funny+-is:digital");
       const data = await response.json();
       res.json(data);
     } catch (e: any) {

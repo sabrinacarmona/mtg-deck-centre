@@ -562,7 +562,7 @@ export default function LearnPage() {
                 ].map(([name, mana, desc, example]) => (
                   <div key={name} className="rounded-lg bg-card/60 p-3 border border-border/40">
                     <div className="flex items-center gap-2 mb-1">
-                      <ManaSymbol symbol={mana} size={18} />
+                      <ManaSymbol symbol={mana} size="md" />
                       <span className="font-bold">{name}</span>
                     </div>
                     <p className="text-xs text-muted-foreground">{desc}</p>

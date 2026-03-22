@@ -674,7 +674,7 @@ function HomeDashboard({ decks }: { decks: Deck[] }) {
   }, 0);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5">
       {/* Stats row */}
       <div className="grid grid-cols-4 gap-3 stagger-children">
         <StatCard icon={Crown} label="Decks" value={myDecks.length.toString()} />
