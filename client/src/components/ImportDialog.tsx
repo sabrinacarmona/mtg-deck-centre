@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
@@ -22,6 +22,7 @@ import {
   CheckCircle2,
   XCircle,
   AlertTriangle,
+  Wand2,
 } from "lucide-react";
 import type { ScryfallCard } from "@shared/schema";
 
@@ -32,6 +33,8 @@ interface ImportDialogProps {
   deckId?: number;
   /** Board for deck imports */
   board?: "main" | "side";
+  /** Callback when import completes successfully (for post-import actions) */
+  onImportComplete?: (result: ImportResult) => void;
 }
 
 interface ParsedLine {
@@ -44,6 +47,14 @@ interface ImportResult {
   added: number;
   failed: string[];
   notFound: string[];
+  tokensSkipped: number;
+}
+
+interface ImportProgress {
+  phase: "parsing" | "resolving" | "importing" | "done";
+  message: string;
+  current: number;
+  total: number;
 }
 
 /** Parse MTGO/Arena decklist format:
@@ -80,37 +91,6 @@ function parseDecklistLine(line: string): ParsedLine | null {
   return null;
 }
 
-/** Parse CSV content. Expects columns: name/card_name, quantity/qty/count (optional), set (optional) */
-function parseCSV(text: string): ParsedLine[] {
-  const lines = text.split("\n").filter((l) => l.trim());
-  if (lines.length < 2) return [];
-
-  const header = lines[0].toLowerCase().split(",").map((h) => h.trim().replace(/"/g, ""));
-  const nameIdx = header.findIndex((h) =>
-    ["name", "card_name", "card name", "card"].includes(h)
-  );
-  const qtyIdx = header.findIndex((h) =>
-    ["quantity", "qty", "count", "amount", "copies"].includes(h)
-  );
-  const setIdx = header.findIndex((h) => ["set", "set_code", "set code", "edition"].includes(h));
-
-  if (nameIdx === -1) return [];
-
-  const results: ParsedLine[] = [];
-  for (let i = 1; i < lines.length; i++) {
-    const cols = parseCSVLine(lines[i]);
-    const name = cols[nameIdx]?.trim();
-    if (!name) continue;
-
-    results.push({
-      name,
-      quantity: qtyIdx !== -1 ? parseInt(cols[qtyIdx], 10) || 1 : 1,
-      set: setIdx !== -1 ? cols[setIdx]?.trim() || undefined : undefined,
-    });
-  }
-  return results;
-}
-
 /** Basic CSV line parser that handles quoted fields */
 function parseCSVLine(line: string): string[] {
   const result: string[] = [];
@@ -128,6 +108,124 @@ function parseCSVLine(line: string): string[] {
   }
   result.push(current);
   return result;
+}
+
+/** Check if CSV headers match TCGPlayer export format */
+function isTCGPlayerFormat(headers: string[]): boolean {
+  const lower = headers.map((h) => h.trim().toLowerCase().replace(/"/g, ""));
+  return lower.includes("product name") && lower.includes("quantity");
+}
+
+/** Basic lands set (for stripping collector numbers but keeping the name) */
+const BASIC_LAND_NAMES = new Set([
+  "plains", "island", "swamp", "mountain", "forest",
+  "snow-covered plains", "snow-covered island", "snow-covered swamp",
+  "snow-covered mountain", "snow-covered forest", "snow-covered wastes", "wastes",
+]);
+
+/**
+ * Clean a TCGPlayer "Product Name" to get the Scryfall-compatible card name.
+ * - Strips "(Ripple Foil)", "(Retro Frame)", "(Extended Art)", etc.
+ * - For basic lands: "Forest (0308)" -> "Forest", "Forest (0506) (Ripple Foil)" -> "Forest"
+ * - Keeps the base card name intact for cards with commas like "Ulalek, Fused Atrocity"
+ */
+function cleanTCGPlayerName(productName: string): string {
+  let name = productName.trim();
+
+  // Strip all parenthetical suffixes: (Ripple Foil), (Retro Frame), (Extended Art),
+  // (Borderless), (0308), etc.
+  // We do this iteratively to handle multiple like "Forest (0506) (Ripple Foil)"
+  name = name.replace(/\s*\([^)]*\)\s*/g, " ").trim();
+
+  return name;
+}
+
+/** Parse TCGPlayer CSV format */
+function parseTCGPlayerCSV(lines: string[]): { parsed: ParsedLine[]; tokensSkipped: number } {
+  if (lines.length < 2) return { parsed: [], tokensSkipped: 0 };
+
+  const header = parseCSVLine(lines[0]).map((h) => h.trim().toLowerCase().replace(/"/g, ""));
+
+  const productNameIdx = header.findIndex((h) => h === "product name");
+  const quantityIdx = header.findIndex((h) => h === "quantity");
+  const rarityIdx = header.findIndex((h) => h === "rarity");
+  const setIdx = header.findIndex((h) => h === "set");
+
+  if (productNameIdx === -1 || quantityIdx === -1) {
+    return { parsed: [], tokensSkipped: 0 };
+  }
+
+  const results: ParsedLine[] = [];
+  let tokensSkipped = 0;
+
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const cols = parseCSVLine(lines[i]);
+
+    const rawName = cols[productNameIdx]?.trim();
+    if (!rawName) continue;
+
+    const quantity = parseInt(cols[quantityIdx], 10) || 1;
+
+    // Skip tokens (Rarity = "T")
+    if (rarityIdx !== -1) {
+      const rarity = cols[rarityIdx]?.trim().toUpperCase();
+      if (rarity === "T") {
+        tokensSkipped += quantity;
+        continue;
+      }
+    }
+
+    const name = cleanTCGPlayerName(rawName);
+    if (!name || name.length < 2) continue;
+
+    results.push({
+      name,
+      quantity,
+      set: setIdx !== -1 ? cols[setIdx]?.trim() || undefined : undefined,
+    });
+  }
+
+  return { parsed: results, tokensSkipped };
+}
+
+/** Parse standard CSV content. Expects columns: name/card_name, quantity/qty/count (optional), set (optional) */
+function parseCSV(text: string): { parsed: ParsedLine[]; tokensSkipped: number } {
+  const lines = text.split("\n").filter((l) => l.trim());
+  if (lines.length < 2) return { parsed: [], tokensSkipped: 0 };
+
+  const headers = parseCSVLine(lines[0]);
+
+  // Auto-detect TCGPlayer format
+  if (isTCGPlayerFormat(headers)) {
+    return parseTCGPlayerCSV(lines);
+  }
+
+  // Standard CSV format
+  const header = headers.map((h) => h.trim().toLowerCase().replace(/"/g, ""));
+  const nameIdx = header.findIndex((h) =>
+    ["name", "card_name", "card name", "card"].includes(h)
+  );
+  const qtyIdx = header.findIndex((h) =>
+    ["quantity", "qty", "count", "amount", "copies"].includes(h)
+  );
+  const setIdx = header.findIndex((h) => ["set", "set_code", "set code", "edition"].includes(h));
+
+  if (nameIdx === -1) return { parsed: [], tokensSkipped: 0 };
+
+  const results: ParsedLine[] = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = parseCSVLine(lines[i]);
+    const name = cols[nameIdx]?.trim();
+    if (!name) continue;
+
+    results.push({
+      name,
+      quantity: qtyIdx !== -1 ? parseInt(cols[qtyIdx], 10) || 1 : 1,
+      set: setIdx !== -1 ? cols[setIdx]?.trim() || undefined : undefined,
+    });
+  }
+  return { parsed: results, tokensSkipped: 0 };
 }
 
 /** Convert a Scryfall card to the shape our DB expects */
@@ -172,13 +270,17 @@ export default function ImportDialog({
   onOpenChange,
   deckId,
   board = "main",
+  onImportComplete,
 }: ImportDialogProps) {
   const [tab, setTab] = useState("decklist");
   const [decklistText, setDecklistText] = useState("");
   const [bulkText, setBulkText] = useState("");
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvPreview, setCsvPreview] = useState<ParsedLine[]>([]);
+  const [csvTokensSkipped, setCsvTokensSkipped] = useState(0);
+  const [csvFormat, setCsvFormat] = useState<"standard" | "tcgplayer" | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
+  const [progress, setProgress] = useState<ImportProgress | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -191,8 +293,22 @@ export default function ImportDialog({
     : ["/api/collection"];
 
   const importMutation = useMutation({
-    mutationFn: async (parsed: ParsedLine[]) => {
+    mutationFn: async ({
+      parsed,
+      tokensSkipped = 0,
+    }: {
+      parsed: ParsedLine[];
+      tokensSkipped?: number;
+    }) => {
       setResult(null);
+
+      // Phase 1: Parsing / deduplicating
+      setProgress({
+        phase: "parsing",
+        message: `Processing ${parsed.length} card entries...`,
+        current: 0,
+        total: parsed.length,
+      });
 
       // Dedupe by name (sum quantities)
       const deduped = new Map<string, ParsedLine>();
@@ -207,17 +323,32 @@ export default function ImportDialog({
       }
       const entries = Array.from(deduped.values());
 
-      // Resolve all card names via Scryfall collection endpoint
+      // Phase 2: Resolve names via Scryfall
+      setProgress({
+        phase: "resolving",
+        message: `Resolving ${entries.length} unique card names via Scryfall...`,
+        current: 0,
+        total: entries.length,
+      });
+
       const identifiers = entries.map((e) =>
         e.set ? { name: e.name, set: e.set } : { name: e.name }
       );
 
+      // Batch resolve (Scryfall API handles 75 at a time internally)
       const resolveRes = await apiRequest("POST", "/api/scryfall/collection", {
         identifiers,
       });
       const resolveData = await resolveRes.json();
       const found: ScryfallCard[] = resolveData.data || [];
       const notFoundRaw: any[] = resolveData.not_found || [];
+
+      setProgress({
+        phase: "resolving",
+        message: `Resolved ${found.length} cards. ${notFoundRaw.length} not found.`,
+        current: found.length,
+        total: entries.length,
+      });
 
       // Build a map from lowercase name to resolved card
       const resolvedMap = new Map<string, ScryfallCard>();
@@ -248,27 +379,52 @@ export default function ImportDialog({
         );
       }
 
-      // Send to bulk import endpoint
+      // Phase 3: Import to database
+      setProgress({
+        phase: "importing",
+        message: `Adding ${importCards.length} cards to ${target}...`,
+        current: 0,
+        total: importCards.length,
+      });
+
       if (importCards.length > 0) {
         const importRes = await apiRequest("POST", importEndpoint, {
           cards: importCards,
         });
         const importData = await importRes.json();
+
+        setProgress({
+          phase: "done",
+          message: "Import complete!",
+          current: importData.added || 0,
+          total: importCards.length,
+        });
+
         return {
           added: importData.added || 0,
           failed: [...failedNames, ...(importData.failed || [])],
           notFound: notFoundNames,
+          tokensSkipped,
         } as ImportResult;
       }
+
+      setProgress({
+        phase: "done",
+        message: "Import complete!",
+        current: 0,
+        total: 0,
+      });
 
       return {
         added: 0,
         failed: failedNames,
         notFound: notFoundNames,
+        tokensSkipped,
       } as ImportResult;
     },
     onSuccess: (data) => {
       setResult(data);
+      setProgress(null);
       queryClient.invalidateQueries({ queryKey: invalidateKey });
       if (data.added > 0) {
         toast({
@@ -279,8 +435,10 @@ export default function ImportDialog({
               : undefined,
         });
       }
+      onImportComplete?.(data);
     },
     onError: (err: Error) => {
+      setProgress(null);
       toast({
         title: "Import failed",
         description: err.message,
@@ -300,7 +458,7 @@ export default function ImportDialog({
       });
       return;
     }
-    importMutation.mutate(parsed);
+    importMutation.mutate({ parsed, tokensSkipped: 0 });
   };
 
   const handleBulkImport = () => {
@@ -318,19 +476,22 @@ export default function ImportDialog({
       });
       return;
     }
-    importMutation.mutate(parsed);
+    importMutation.mutate({ parsed, tokensSkipped: 0 });
   };
 
   const handleCSVImport = () => {
     if (csvPreview.length === 0) {
       toast({
         title: "No cards found in CSV",
-        description: "Make sure your CSV has a 'name' column",
+        description:
+          csvFormat === "tcgplayer"
+            ? "No importable cards found in TCGPlayer export"
+            : "Make sure your CSV has a 'name' column",
         variant: "destructive",
       });
       return;
     }
-    importMutation.mutate(csvPreview);
+    importMutation.mutate({ parsed: csvPreview, tokensSkipped: csvTokensSkipped });
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -338,16 +499,26 @@ export default function ImportDialog({
     if (!file) return;
     setCsvFile(file);
     const text = await file.text();
-    const parsed = parseCSV(text);
+    const lines = text.split("\n").filter((l) => l.trim());
+    if (lines.length > 0) {
+      const headers = parseCSVLine(lines[0]);
+      const isTCG = isTCGPlayerFormat(headers);
+      setCsvFormat(isTCG ? "tcgplayer" : "standard");
+    }
+    const { parsed, tokensSkipped } = parseCSV(text);
     setCsvPreview(parsed);
+    setCsvTokensSkipped(tokensSkipped);
   };
 
   const resetState = () => {
     setResult(null);
+    setProgress(null);
     setDecklistText("");
     setBulkText("");
     setCsvFile(null);
     setCsvPreview([]);
+    setCsvTokensSkipped(0);
+    setCsvFormat(null);
     if (fileRef.current) fileRef.current.value = "";
   };
 
@@ -370,6 +541,33 @@ export default function ImportDialog({
           </DialogDescription>
         </DialogHeader>
 
+        {/* Progress view */}
+        {progress && !result && (
+          <div className="space-y-3" data-testid="import-progress">
+            <div className="flex items-center gap-2 text-sm">
+              <Loader2 className="w-4 h-4 animate-spin text-primary" />
+              <span className="font-medium">{progress.message}</span>
+            </div>
+            {progress.total > 0 && (
+              <div className="space-y-1.5">
+                <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                  <div
+                    className="bg-primary h-full rounded-full transition-all duration-300"
+                    style={{
+                      width: `${Math.min(100, (progress.current / progress.total) * 100)}%`,
+                    }}
+                  />
+                </div>
+                <div className="text-[10px] text-muted-foreground text-right">
+                  {progress.phase === "resolving" && `${progress.current} / ${progress.total} resolved`}
+                  {progress.phase === "importing" && `${progress.current} / ${progress.total} imported`}
+                  {progress.phase === "parsing" && `${progress.total} entries`}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Results view */}
         {result && (
           <div className="space-y-3" data-testid="import-results">
@@ -379,6 +577,13 @@ export default function ImportDialog({
                 {result.added} card{result.added !== 1 ? "s" : ""} imported
               </span>
             </div>
+
+            {result.tokensSkipped > 0 && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <AlertTriangle className="w-4 h-4" />
+                <span>{result.tokensSkipped} token{result.tokensSkipped !== 1 ? "s" : ""} skipped</span>
+              </div>
+            )}
 
             {result.notFound.length > 0 && (
               <div className="space-y-1.5">
@@ -439,7 +644,7 @@ export default function ImportDialog({
         )}
 
         {/* Import tabs */}
-        {!result && (
+        {!result && !progress && (
           <Tabs value={tab} onValueChange={setTab}>
             <TabsList className="w-full">
               <TabsTrigger value="decklist" className="flex-1 text-xs gap-1.5">
@@ -539,12 +744,11 @@ export default function ImportDialog({
             <TabsContent value="csv" className="space-y-3 mt-3">
               <div className="space-y-1.5">
                 <p className="text-xs text-muted-foreground">
-                  Upload a CSV file with at least a <code className="text-[10px] bg-muted px-1 py-0.5 rounded">name</code> column.
-                  Optional columns: <code className="text-[10px] bg-muted px-1 py-0.5 rounded">quantity</code>,{" "}
-                  <code className="text-[10px] bg-muted px-1 py-0.5 rounded">set</code>.
+                  Upload a CSV file. Supports <strong>TCGPlayer</strong> exports, Moxfield, Archidekt, Deckbox,
+                  and other collection managers.
                 </p>
                 <p className="text-[10px] text-muted-foreground">
-                  Compatible with exports from Moxfield, Archidekt, Deckbox, and other collection managers.
+                  TCGPlayer CSVs are auto-detected. Tokens are skipped, variants (Ripple Foil, Retro Frame) are merged, and quantities are aggregated.
                 </p>
               </div>
 
@@ -569,6 +773,19 @@ export default function ImportDialog({
                   data-testid="csv-file-input"
                 />
               </div>
+
+              {csvFormat && (
+                <div className="flex items-center gap-2">
+                  <Badge variant={csvFormat === "tcgplayer" ? "default" : "secondary"} className="text-[10px]">
+                    {csvFormat === "tcgplayer" ? "TCGPlayer Format Detected" : "Standard CSV"}
+                  </Badge>
+                  {csvTokensSkipped > 0 && (
+                    <Badge variant="outline" className="text-[10px]">
+                      {csvTokensSkipped} token{csvTokensSkipped !== 1 ? "s" : ""} will be skipped
+                    </Badge>
+                  )}
+                </div>
+              )}
 
               {csvPreview.length > 0 && (
                 <div className="space-y-2">
@@ -624,3 +841,6 @@ export default function ImportDialog({
     </Dialog>
   );
 }
+
+// Re-export types for use by other components
+export type { ImportResult, ParsedLine };

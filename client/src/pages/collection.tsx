@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Minus, Plus, Trash2, DollarSign, BookOpen, Import, X, ArrowUpDown } from "lucide-react";
+import { Search, Minus, Plus, Trash2, DollarSign, BookOpen, Import, X, ArrowUpDown, Wand2 } from "lucide-react";
 import ImportDialog from "@/components/ImportDialog";
+import DeckBuilder from "@/components/DeckBuilder";
 import { ManaCost, OracleText } from "@/components/ManaSymbols";
 import {
   Select,
@@ -31,6 +32,7 @@ export default function CollectionPage() {
   const [colorFilter, setColorFilter] = useState("all");
   const [sortBy, setSortBy] = useState("name-asc");
   const [importOpen, setImportOpen] = useState(false);
+  const [deckBuilderOpen, setDeckBuilderOpen] = useState(false);
   const [zoomedCard, setZoomedCard] = useState<CollectionCard | null>(null);
   const { toast } = useToast();
 
@@ -170,6 +172,16 @@ export default function CollectionPage() {
         >
           <Import className="w-3.5 h-3.5" />
           Import
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          className="gap-1.5 shrink-0"
+          onClick={() => setDeckBuilderOpen(true)}
+          data-testid="build-deck-btn"
+        >
+          <Wand2 className="w-3.5 h-3.5" />
+          Build Deck
         </Button>
         <div className="flex flex-wrap gap-1.5">
           {colorFilters.map((f) => (
@@ -326,6 +338,21 @@ export default function CollectionPage() {
       <ImportDialog
         open={importOpen}
         onOpenChange={setImportOpen}
+        onImportComplete={(result) => {
+          if (result.added > 0) {
+            // After successful import, close import and offer deck building
+            setTimeout(() => {
+              setImportOpen(false);
+              setDeckBuilderOpen(true);
+            }, 1500);
+          }
+        }}
+      />
+
+      {/* Deck Builder dialog */}
+      <DeckBuilder
+        open={deckBuilderOpen}
+        onOpenChange={setDeckBuilderOpen}
       />
 
       {/* Collection card zoom overlay */}
